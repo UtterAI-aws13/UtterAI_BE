@@ -17,7 +17,7 @@
 | Children | 구현됨 | CRUD 및 therapist/admin 접근 제어 구현 완료 |
 | Sessions | 구현됨 | CRUD 및 therapist/admin 접근 제어 구현 완료 |
 | Audio Files | 구현됨 | presigned URL, complete, detail, delete 구현 완료. live S3/DB 검증만 남음 |
-| Analysis Jobs | 미구현 | 요청, 상태 조회, callback 미구현 |
+| Analysis Jobs | 부분 구현 | 요청, 목록, 상세, 취소, progress callback 구현 완료. result callback 미구현 |
 | Transcripts | 미구현 | 조회/수정 미구현 |
 | Analysis Results | 미구현 | 조회 계열 미구현 |
 | SOAP Notes | 미구현 | 생성/수정/확정 미구현 |
@@ -44,13 +44,19 @@
 - [x] `POST /api/v1/audio-files`
 - [x] `GET /api/v1/audio-files/{audioFileId}`
 - [x] `DELETE /api/v1/audio-files/{audioFileId}`
+- [x] `POST /api/v1/analysis-jobs`
+- [x] `GET /api/v1/analysis-jobs`
+- [x] `GET /api/v1/analysis-jobs/{jobId}`
+- [x] `PATCH /api/v1/analysis-jobs/{jobId}/cancel`
+- [x] `POST /api/v1/internal/analysis-jobs/{jobId}/progress`
 
 ## Remaining Near-Term APIs
 
-- [ ] `POST /api/v1/analysis-jobs`
-- [ ] `GET /api/v1/analysis-jobs`
-- [ ] `GET /api/v1/analysis-jobs/{jobId}`
-- [ ] `PATCH /api/v1/analysis-jobs/{jobId}/cancel`
+- [ ] `POST /api/v1/internal/analysis-results/callback`
+- [ ] `GET /api/v1/transcripts/{transcriptId}`
+- [ ] `GET /api/v1/sessions/{sessionId}/transcript`
+- [ ] `PATCH /api/v1/transcripts/{transcriptId}/segments/{segmentId}`
+- [ ] `PATCH /api/v1/transcripts/{transcriptId}/segments`
 
 ## Validation Status
 
@@ -58,4 +64,5 @@
 - [ ] Children API live validation against a real DB
 - [ ] Sessions API live validation against a real DB
 - [ ] Audio Files API live validation against real DB/S3
+- [ ] Analysis Jobs API live validation against real DB/AI callback mock
 - [ ] OpenAPI route list review against `API 명세서.md`

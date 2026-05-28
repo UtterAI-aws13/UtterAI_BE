@@ -1,12 +1,13 @@
 """Reusable API dependencies shared across routers."""
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db_session
 from app.core.enums import UserStatus
+from app.core.config import get_settings
 from app.core.security import decode_access_token
 from app.repositories.user import UserRepository
 from app.schemas.auth import TokenPayload, UserRead
@@ -14,6 +15,7 @@ from app.schemas.auth import TokenPayload, UserRead
 # The token URL points to our JSON login endpoint so the OpenAPI docs still
 # describe where a client obtains bearer tokens.
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+settings = get_settings()
 
 
 def get_current_user(
@@ -45,3 +47,20 @@ def get_current_user(
         raise credentials_exception
 
     return UserRead.model_validate(user)
+
+
+def verify_internal_token(
+    x_internal_token: str = Header(alias="X-Internal-Token"),
+) -> str:
+    """Verify internal callback requests coming from the AI service.
+
+    Internal callback endpoints are not user-authenticated. They rely on a
+    shared secret header so external clients cannot mutate job state directly.
+    """
+
+    if x_internal_token != settings.internal_callback_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid internal token.",
+        )
+    return x_internal_token

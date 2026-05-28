@@ -11,6 +11,7 @@ from app.core.enums import (
     AccessGrantLevel,
     AccessGrantStatus,
     AudioFileStatus,
+    AnalysisJobStatus,
     ChildStatus,
     SessionStatus,
     UserRole,
@@ -208,3 +209,39 @@ class AudioFile(TimestampMixin, Base):
         default=AudioFileStatus.PENDING,
         server_default=AudioFileStatus.PENDING.value,
     )
+
+
+class AnalysisJob(TimestampMixin, Base):
+    """Track AI analysis requests and their lifecycle status."""
+
+    __tablename__ = "analysis_jobs"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("sessions.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    audio_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("audio_files.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    external_ai_job_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    status: Mapped[AnalysisJobStatus] = mapped_column(
+        Enum(AnalysisJobStatus, name="analysis_job_status"),
+        nullable=False,
+        default=AnalysisJobStatus.REQUESTED,
+        server_default=AnalysisJobStatus.REQUESTED.value,
+    )
+    progress: Mapped[int] = mapped_column(nullable=False, default=0, server_default="0")
+    current_stage: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    error_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
