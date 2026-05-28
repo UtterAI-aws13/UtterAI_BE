@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     internal_callback_token: str = "change-me-internal-token"
     internal_callback_hmac_secret: str = "change-me-hmac-secret"
 
+    aws_region: str = "ap-northeast-2"
+    raw_audio_bucket: str = "utterai-raw-audio"
+    presigned_url_expire_seconds: int = 900
+
 
 @lru_cache
 def get_settings() -> Settings:

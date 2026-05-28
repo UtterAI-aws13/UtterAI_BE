@@ -95,10 +95,16 @@
 
 | 상태 | 기능 | 사용자 | Method | URL | Query Param | Request Body | 설명 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 미구현 | 음성 업로드 URL 발급 | 치료사 | POST | `/api/v1/audio-files/presigned-url` | - | `fileName`, `contentType`, `sessionId` | S3 업로드용 presigned URL 발급 |
-| 미구현 | 음성 파일 등록 | 치료사 | POST | `/api/v1/audio-files` | - | `sessionId`, `s3Key`, `duration` | 업로드 완료된 음성 메타데이터 저장 |
-| 미구현 | 음성 파일 조회 | 치료사, 관리자 | GET | `/api/v1/audio-files/{audioFileId}` | - | - | 음성 파일 메타데이터 조회 |
-| 미구현 | 음성 파일 삭제 | 치료사, 관리자 | DELETE | `/api/v1/audio-files/{audioFileId}` | - | - | 음성 파일 삭제 요청 |
+| 구현됨 | 음성 업로드 URL 발급 | 치료사, 관리자 | POST | `/api/v1/audio-files/presigned-url` | - | `file_name`, `content_type`, `session_id`, `file_size(optional)` | pending audio row 생성 후 S3 업로드용 presigned URL 발급 |
+| 구현됨 | 음성 파일 등록 | 치료사, 관리자 | POST | `/api/v1/audio-files` | - | `session_id`, `s3_key`, `duration_seconds(optional)` | 업로드 완료된 음성 메타데이터 확정 |
+| 구현됨 | 음성 파일 조회 | 치료사, 관리자 | GET | `/api/v1/audio-files/{audioFileId}` | - | - | 음성 파일 메타데이터 조회 |
+| 구현됨 | 음성 파일 삭제 | 치료사, 관리자 | DELETE | `/api/v1/audio-files/{audioFileId}` | - | - | 음성 파일 soft delete |
+
+### 구현 메모
+
+- presigned URL 발급 시 서버가 `audio_files`의 `PENDING` row를 먼저 만든다.
+- 업로드 완료 API는 `s3_key` 기준으로 row를 찾아 `UPLOADED`로 상태 전이한다.
+- 업로드 완료 시 세션 상태는 `AUDIO_UPLOADED`로 변경된다.
 
 ---
 

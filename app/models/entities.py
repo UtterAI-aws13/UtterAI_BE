@@ -10,6 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.core.enums import (
     AccessGrantLevel,
     AccessGrantStatus,
+    AudioFileStatus,
     ChildStatus,
     SessionStatus,
     UserRole,
@@ -177,4 +178,33 @@ class RefreshToken(Base):
     revoked_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
+    )
+
+
+class AudioFile(TimestampMixin, Base):
+    """Metadata row for an uploaded or pending audio file."""
+
+    __tablename__ = "audio_files"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("sessions.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    original_file_name: Mapped[str] = mapped_column(Text, nullable=False)
+    content_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    file_size: Mapped[int | None] = mapped_column(nullable=True)
+    s3_bucket: Mapped[str] = mapped_column(String(255), nullable=False)
+    s3_key: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    duration_seconds: Mapped[float | None] = mapped_column(nullable=True)
+    status: Mapped[AudioFileStatus] = mapped_column(
+        Enum(AudioFileStatus, name="audio_file_status"),
+        nullable=False,
+        default=AudioFileStatus.PENDING,
+        server_default=AudioFileStatus.PENDING.value,
     )
