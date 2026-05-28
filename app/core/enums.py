@@ -48,6 +48,18 @@ class AudioFileStatus(StrEnum):
     DELETED = "DELETED"
 
 
+class AnalysisJobStatus(StrEnum):
+    """Analysis job lifecycle states aligned with the architecture document."""
+
+    REQUESTED = "REQUESTED"
+    QUEUED = "QUEUED"
+    PROCESSING = "PROCESSING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
+    EXPIRED = "EXPIRED"
+
+
 class AccessGrantLevel(StrEnum):
     """Child sharing permission levels for guardians and viewers."""
 

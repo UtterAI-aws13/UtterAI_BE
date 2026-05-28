@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     raw_audio_bucket: str = "utterai-raw-audio"
     presigned_url_expire_seconds: int = 900
 
+    ai_service_base_url: str = ""
+    ai_service_analysis_path: str = "/internal/ai/analysis-jobs"
+    public_api_base_url: str = "http://localhost:8000"
+
 
 @lru_cache
 def get_settings() -> Settings:

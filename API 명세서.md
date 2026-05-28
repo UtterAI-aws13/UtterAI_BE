@@ -112,12 +112,19 @@
 
 | 상태 | 기능 | 사용자 | Method | URL | Query Param | Request Body | 설명 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 미구현 | AI 분석 요청 | 치료사 | POST | `/api/v1/analysis-jobs` | - | `sessionId`, `audioFileId`, `analysisTemplate(optional)` | AI 분석 작업 생성 |
-| 미구현 | 분석 작업 목록 | 치료사, 관리자 | GET | `/api/v1/analysis-jobs` | `sessionId`, `status`, `page`, `size` | - | 분석 작업 목록 조회 |
-| 미구현 | 분석 작업 상태 조회 | 치료사, 관리자 | GET | `/api/v1/analysis-jobs/{jobId}` | - | - | 분석 진행 상태 조회 |
-| 미구현 | 분석 작업 취소 | 치료사, 관리자 | PATCH | `/api/v1/analysis-jobs/{jobId}/cancel` | - | - | 대기 중인 분석 작업 취소 |
-| 미구현 | 내부 진행률 Callback | 내부 AI 시스템 | POST | `/api/v1/internal/analysis-jobs/{jobId}/progress` | - | `status`, `progress`, `currentStage` | 진행 상태 업데이트 |
+| 구현됨 | AI 분석 요청 | 치료사, 관리자 | POST | `/api/v1/analysis-jobs` | - | `session_id`, `audio_file_id`, `analysis_template(optional)` | AI 분석 작업 생성 |
+| 구현됨 | 분석 작업 목록 | 치료사, 관리자 | GET | `/api/v1/analysis-jobs` | `session_id(optional)`, `status(optional)` | - | 분석 작업 목록 조회 |
+| 구현됨 | 분석 작업 상태 조회 | 치료사, 관리자 | GET | `/api/v1/analysis-jobs/{jobId}` | - | - | 분석 진행 상태 조회 |
+| 구현됨 | 분석 작업 취소 | 치료사, 관리자 | PATCH | `/api/v1/analysis-jobs/{jobId}/cancel` | - | - | active 분석 작업 취소 |
+| 구현됨 | 내부 진행률 Callback | 내부 AI 시스템 | POST | `/api/v1/internal/analysis-jobs/{jobId}/progress` | - | `status`, `progress`, `current_stage` | 진행 상태 업데이트 |
 | 미구현 | 내부 결과 Callback | 내부 AI 시스템 | POST | `/api/v1/internal/analysis-results/callback` | - | 결과 payload | 분석 결과 수신 |
+
+### 구현 메모
+
+- 한 세션에는 동시에 active analysis job 하나만 허용한다.
+- 생성 시 업로드 완료(`AUDIO_UPLOADED`)된 audio file만 분석 요청 가능하다.
+- `internal progress callback`은 `X-Internal-Token` 인증이 필요하다.
+- `result callback`은 transcript/result 저장 단계와 함께 구현 예정이다.
 
 ---
 
