@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.api.dependencies import get_current_user
 from app.core.db import get_db_session
 from app.schemas.auth import UserRead
-from app.schemas.report import ReportCreateRequest, ReportRead
+from app.schemas.report import ReportCreateRequest, ReportRead, ReportUpdateRequest
 from app.services.report import ReportService
 
 router = APIRouter()
@@ -51,6 +51,19 @@ def get_report(
 
     service = ReportService(db)
     return service.get(report_id, current_user)
+
+
+@router.patch("/{report_id}", response_model=ReportRead)
+def update_report(
+    report_id: uuid.UUID,
+    request: ReportUpdateRequest,
+    current_user: UserRead = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> ReportRead:
+    """Apply manual edits to an accessible report."""
+
+    service = ReportService(db)
+    return service.update(report_id, request, current_user)
 
 
 @router.get("/{report_id}/download")

@@ -33,3 +33,11 @@ class ReportRead(BaseModel):
     status: ReportStatus
     created_at: datetime
     updated_at: datetime
+
+
+class ReportUpdateRequest(BaseModel):
+    """Payload for manual edits to generated report content."""
+
+    title: str | None = Field(default=None, min_length=1, max_length=255)
+    content: str | None = None
+    memo: str | None = None

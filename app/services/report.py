@@ -14,7 +14,7 @@ from app.repositories.report import ReportRepository
 from app.repositories.session import SessionRepository
 from app.repositories.soap_note import SoapNoteRepository
 from app.schemas.auth import UserRead
-from app.schemas.report import ReportCreateRequest, ReportRead
+from app.schemas.report import ReportCreateRequest, ReportRead, ReportUpdateRequest
 
 
 class ReportService:
@@ -79,6 +79,25 @@ class ReportService:
 
         report = self._get_accessible_report(report_id, current_user)
         return ReportRead.model_validate(report)
+
+    def update(
+        self,
+        report_id: uuid.UUID,
+        request: ReportUpdateRequest,
+        current_user: UserRead,
+    ) -> ReportRead:
+        """Apply manual edits to an accessible report.
+
+        Manual editing lets the clinician refine generated language before the
+        report is downloaded or shared. Deleted reports remain immutable.
+        """
+
+        report = self._get_accessible_report(report_id, current_user)
+        update_data = request.model_dump(exclude_unset=True)
+        for field_name, value in update_data.items():
+            setattr(report, field_name, value)
+        stored_report = self.report_repository.update(report)
+        return ReportRead.model_validate(stored_report)
 
     def get_download_payload(self, report_id: uuid.UUID, current_user: UserRead) -> tuple[str, str]:
         """Return a filename and text payload for download responses.
