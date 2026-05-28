@@ -14,6 +14,7 @@ from app.core.enums import (
     AnalysisJobStatus,
     ChildStatus,
     SessionStatus,
+    SoapNoteStatus,
     SpeakerRole,
     UserRole,
     UserStatus,
@@ -361,3 +362,45 @@ class UtteranceEditHistory(Base):
     new_speaker_role: Mapped[str | None] = mapped_column(String(50), nullable=True)
     edit_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class SoapNote(TimestampMixin, Base):
+    """Persist generated or edited SOAP notes linked to analysis artifacts."""
+
+    __tablename__ = "soap_notes"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("sessions.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    result_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("analysis_results.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    job_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("analysis_jobs.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    generated_by: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    subjective: Mapped[str | None] = mapped_column(Text, nullable=True)
+    objective: Mapped[str | None] = mapped_column(Text, nullable=True)
+    assessment: Mapped[str | None] = mapped_column(Text, nullable=True)
+    plan: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[SoapNoteStatus] = mapped_column(
+        Enum(SoapNoteStatus, name="soap_note_status"),
+        nullable=False,
+        default=SoapNoteStatus.DRAFT,
+        server_default=SoapNoteStatus.DRAFT.value,
+    )

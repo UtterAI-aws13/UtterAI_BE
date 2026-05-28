@@ -165,13 +165,18 @@
 
 | 상태 | 기능 | 사용자 | Method | URL | Query Param | Request Body | 설명 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 미구현 | SOAP Note 초안 생성 | 치료사 | POST | `/api/v1/soap-notes/generate` | - | `sessionId`, `transcriptId`, `clinicalAnalysisJobId` | 분석 결과 기반 초안 생성 |
-| 미구현 | SOAP Note 목록 조회 | 치료사, 관리자 | GET | `/api/v1/soap-notes` | `sessionId`, `childId`, `status`, `page`, `size` | - | SOAP Note 목록 조회 |
-| 미구현 | SOAP Note 상세 조회 | 치료사, 관리자 | GET | `/api/v1/soap-notes/{noteId}` | - | - | SOAP Note 상세 조회 |
+| 구현됨 | SOAP Note 초안 생성 | 치료사, 관리자 | POST | `/api/v1/soap-notes/generate` | - | `sessionId`, `transcriptId`, `clinicalAnalysisJobId(optional)` | 분석 결과 기반 초안 생성 |
+| 구현됨 | SOAP Note 목록 조회 | 치료사, 관리자 | GET | `/api/v1/soap-notes` | `sessionId(optional)`, `childId(optional)` | - | SOAP Note 목록 조회 |
+| 구현됨 | SOAP Note 상세 조회 | 치료사, 관리자 | GET | `/api/v1/soap-notes/{noteId}` | - | - | SOAP Note 상세 조회 |
 | 미구현 | SOAP Note 수정 | 치료사 | PATCH | `/api/v1/soap-notes/{noteId}` | - | `subjective`, `objective`, `assessment`, `plan` | SOAP Note 수정 |
 | 미구현 | SOAP Note 저장 | 치료사 | PATCH | `/api/v1/soap-notes/{noteId}/save` | - | - | 수정본 저장 |
 | 미구현 | SOAP Note 확정 | 치료사 | PATCH | `/api/v1/soap-notes/{noteId}/finalize` | - | - | 최종 확정 |
 | 미구현 | SOAP Note 삭제 | 치료사, 관리자 | DELETE | `/api/v1/soap-notes/{noteId}` | - | - | SOAP Note 삭제 |
+
+### 구현 메모
+
+- SOAP draft 생성 전 transcript 전체가 `confirmed` 상태여야 한다.
+- 현재 draft 생성은 backend-local 텍스트 조합 방식이며, 이후 LLM 기반 고도화가 가능하다.
 
 ---
 
