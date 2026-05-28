@@ -33,3 +33,12 @@ class SoapNoteRead(BaseModel):
     status: SoapNoteStatus
     created_at: datetime
     updated_at: datetime
+
+
+class SoapNoteUpdateRequest(BaseModel):
+    """Payload for editing the four SOAP sections."""
+
+    subjective: str | None = None
+    objective: str | None = None
+    assessment: str | None = None
+    plan: str | None = None

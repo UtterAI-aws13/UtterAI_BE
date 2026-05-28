@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.api.dependencies import get_current_user
 from app.core.db import get_db_session
 from app.schemas.auth import UserRead
-from app.schemas.soap_note import SoapNoteGenerateRequest, SoapNoteRead
+from app.schemas.soap_note import SoapNoteGenerateRequest, SoapNoteRead, SoapNoteUpdateRequest
 from app.services.soap_note import SoapNoteService
 
 router = APIRouter()
@@ -49,3 +49,52 @@ def get_soap_note(
 
     service = SoapNoteService(db)
     return service.get(note_id, current_user)
+
+
+@router.patch("/{note_id}", response_model=SoapNoteRead)
+def update_soap_note(
+    note_id: uuid.UUID,
+    request: SoapNoteUpdateRequest,
+    current_user: UserRead = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> SoapNoteRead:
+    """Edit a mutable SOAP note."""
+
+    service = SoapNoteService(db)
+    return service.update(note_id, request, current_user)
+
+
+@router.patch("/{note_id}/save", response_model=SoapNoteRead)
+def save_soap_note(
+    note_id: uuid.UUID,
+    current_user: UserRead = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> SoapNoteRead:
+    """Mark a SOAP note as saved."""
+
+    service = SoapNoteService(db)
+    return service.save(note_id, current_user)
+
+
+@router.patch("/{note_id}/finalize", response_model=SoapNoteRead)
+def finalize_soap_note(
+    note_id: uuid.UUID,
+    current_user: UserRead = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> SoapNoteRead:
+    """Finalize a SOAP note and prevent further edits."""
+
+    service = SoapNoteService(db)
+    return service.finalize(note_id, current_user)
+
+
+@router.delete("/{note_id}", response_model=SoapNoteRead)
+def delete_soap_note(
+    note_id: uuid.UUID,
+    current_user: UserRead = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> SoapNoteRead:
+    """Soft-delete an accessible SOAP note."""
+
+    service = SoapNoteService(db)
+    return service.delete(note_id, current_user)

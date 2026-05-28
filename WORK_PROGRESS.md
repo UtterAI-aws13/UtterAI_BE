@@ -20,15 +20,16 @@
 
 이번 작업 범위는 다음까지다.
 
-- [x] SOAP Note 모델 및 마이그레이션 추가
-- [x] SOAP Note 초안 생성 API 추가
-- [x] SOAP Note 목록/상세 API 추가
-- [x] transcript confirmed 조건 기반 draft 생성 흐름 추가
+- [x] SOAP Note 수정 API 추가
+- [x] SOAP Note 저장 API 추가
+- [x] SOAP Note 확정 API 추가
+- [x] SOAP Note 삭제 API 추가
+- [x] finalized 이후 수정 불가 규칙 추가
 - [x] API 명세서와 API 진행 추적 문서 갱신
-- [ ] 실제 DB 기반 SOAP draft 생성 수동 검증
+- [ ] 실제 DB 기반 SOAP lifecycle 수동 검증
 
 ## Next Recommended Steps
 
 - [ ] 권한 정책 모듈 구체화
-- [ ] SOAP Note 수정/저장/확정/삭제 구현
+- [ ] report 도메인 구현
 - [ ] 테스트 프레임워크와 기본 테스트 추가
