@@ -18,8 +18,8 @@
 | Sessions | 구현됨 | CRUD 및 therapist/admin 접근 제어 구현 완료 |
 | Audio Files | 구현됨 | presigned URL, complete, detail, delete 구현 완료. live S3/DB 검증만 남음 |
 | Analysis Jobs | 부분 구현 | 요청, 목록, 상세, 취소, progress callback 구현 완료. result callback 미구현 |
-| Transcripts | 미구현 | 조회/수정 미구현 |
-| Analysis Results | 미구현 | 조회 계열 미구현 |
+| Transcripts | 부분 구현 | result callback, 조회, 수정, bulk 수정, confirm 구현 완료. add/delete 미구현 |
+| Analysis Results | 부분 구현 | internal result callback 기반 저장 완료. 전용 조회 계열 미구현 |
 | SOAP Notes | 미구현 | 생성/수정/확정 미구현 |
 | Reports | 미구현 | 생성/조회/다운로드 미구현 |
 
@@ -49,14 +49,20 @@
 - [x] `GET /api/v1/analysis-jobs/{jobId}`
 - [x] `PATCH /api/v1/analysis-jobs/{jobId}/cancel`
 - [x] `POST /api/v1/internal/analysis-jobs/{jobId}/progress`
+- [x] `POST /api/v1/internal/analysis-results/callback`
+- [x] `GET /api/v1/transcripts/{resultId}`
+- [x] `GET /api/v1/sessions/{sessionId}/transcript`
+- [x] `PATCH /api/v1/transcripts/{resultId}/segments/{segmentId}`
+- [x] `PATCH /api/v1/transcripts/{resultId}/segments`
+- [x] `PATCH /api/v1/transcripts/{resultId}/confirm`
 
 ## Remaining Near-Term APIs
 
-- [ ] `POST /api/v1/internal/analysis-results/callback`
-- [ ] `GET /api/v1/transcripts/{transcriptId}`
-- [ ] `GET /api/v1/sessions/{sessionId}/transcript`
-- [ ] `PATCH /api/v1/transcripts/{transcriptId}/segments/{segmentId}`
-- [ ] `PATCH /api/v1/transcripts/{transcriptId}/segments`
+- [ ] `POST /api/v1/transcripts/{resultId}/segments`
+- [ ] `DELETE /api/v1/transcripts/{resultId}/segments/{segmentId}`
+- [ ] `GET /api/v1/analysis-results/{resultId}`
+- [ ] `GET /api/v1/sessions/{sessionId}/analysis-results`
+- [ ] `GET /api/v1/analysis-results/{resultId}/metrics`
 
 ## Validation Status
 
@@ -65,4 +71,5 @@
 - [ ] Sessions API live validation against a real DB
 - [ ] Audio Files API live validation against real DB/S3
 - [ ] Analysis Jobs API live validation against real DB/AI callback mock
+- [ ] Transcript/result callback live validation against real DB/callback mock
 - [ ] OpenAPI route list review against `API 명세서.md`
