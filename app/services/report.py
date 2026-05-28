@@ -67,11 +67,15 @@ class ReportService:
     def list(
         self,
         current_user: UserRead,
+        session_id: uuid.UUID | None = None,
         child_id: uuid.UUID | None = None,
     ) -> list[ReportRead]:
         """List visible reports filtered by child when requested."""
 
-        reports = self.report_repository.list_visible(current_user, child_id)
+        if session_id is not None:
+            self._get_accessible_session(session_id, current_user)
+
+        reports = self.report_repository.list_visible(current_user, session_id, child_id)
         return [ReportRead.model_validate(report) for report in reports]
 
     def get(self, report_id: uuid.UUID, current_user: UserRead) -> ReportRead:

@@ -86,7 +86,7 @@
 | 상태 | 기능 | 사용자 | Method | URL | Query Param | Request Body | 설명 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 미구현 | 세션 요약 조회 | 치료사, 관리자 | GET | `/api/v1/sessions/{sessionId}/summary` | - | - | 업로드 상태, 분석 상태, 결과 요약 조회 |
-| 미구현 | 세션별 리포트 목록 | 치료사, 관리자, 공유 사용자 | GET | `/api/v1/sessions/{sessionId}/reports` | - | - | 세션에 연결된 리포트 목록 조회 |
+| 구현됨 | 세션별 리포트 목록 | 치료사, 관리자 | GET | `/api/v1/sessions/{sessionId}/reports` | - | - | 세션에 연결된 리포트 목록 조회 |
 | 미구현 | 세션별 분석 결과 조회 | 치료사, 관리자, 공유 사용자 | GET | `/api/v1/sessions/{sessionId}/analysis-results` | - | - | 세션에 연결된 분석 결과 조회 |
 
 ---

@@ -43,6 +43,7 @@ class ReportRepository:
     def list_visible(
         self,
         current_user: UserRead,
+        session_id: uuid.UUID | None = None,
         child_id: uuid.UUID | None = None,
     ) -> list[Report]:
         """List non-deleted reports visible to the current user."""
@@ -53,6 +54,8 @@ class ReportRepository:
         ).where(Report.status != ReportStatus.DELETED)
         if current_user.role != UserRole.ADMIN:
             statement = statement.where(SessionEntity.therapist_id == current_user.id)
+        if session_id is not None:
+            statement = statement.where(Report.session_id == session_id)
         if child_id is not None:
             statement = statement.where(SessionEntity.child_id == child_id)
         statement = statement.order_by(Report.created_at.desc())

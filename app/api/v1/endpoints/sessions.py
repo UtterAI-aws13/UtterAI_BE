@@ -8,7 +8,9 @@ from sqlalchemy.orm import Session
 from app.api.dependencies import get_current_user
 from app.core.db import get_db_session
 from app.schemas.auth import UserRead
+from app.schemas.report import ReportRead
 from app.schemas.session import SessionCreateRequest, SessionRead, SessionUpdateRequest
+from app.services.report import ReportService
 from app.services.session import SessionService
 
 router = APIRouter()
@@ -48,6 +50,18 @@ def get_session(
 
     service = SessionService(db)
     return service.get(session_id, current_user)
+
+
+@router.get("/{session_id}/reports", response_model=list[ReportRead])
+def list_session_reports(
+    session_id: uuid.UUID,
+    current_user: UserRead = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> list[ReportRead]:
+    """List reports associated with one accessible session."""
+
+    service = ReportService(db)
+    return service.list(current_user, session_id=session_id)
 
 
 @router.patch("/{session_id}", response_model=SessionRead)
