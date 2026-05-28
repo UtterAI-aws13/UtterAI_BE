@@ -16,7 +16,7 @@
 | Users/Admin | 미구현 | 관리자 사용자 관리 API 없음 |
 | Children | 구현됨 | CRUD 및 therapist/admin 접근 제어 구현 완료 |
 | Sessions | 구현됨 | CRUD 및 therapist/admin 접근 제어 구현 완료 |
-| Audio Files | 미구현 | 업로드 URL, 등록, 조회, 삭제 미구현 |
+| Audio Files | 구현됨 | presigned URL, complete, detail, delete 구현 완료. live S3/DB 검증만 남음 |
 | Analysis Jobs | 미구현 | 요청, 상태 조회, callback 미구현 |
 | Transcripts | 미구현 | 조회/수정 미구현 |
 | Analysis Results | 미구현 | 조회 계열 미구현 |
@@ -40,13 +40,13 @@
 - [x] `GET /api/v1/sessions/{sessionId}`
 - [x] `PATCH /api/v1/sessions/{sessionId}`
 - [x] `DELETE /api/v1/sessions/{sessionId}`
+- [x] `POST /api/v1/audio-files/presigned-url`
+- [x] `POST /api/v1/audio-files`
+- [x] `GET /api/v1/audio-files/{audioFileId}`
+- [x] `DELETE /api/v1/audio-files/{audioFileId}`
 
 ## Remaining Near-Term APIs
 
-- [ ] `POST /api/v1/audio-files/presigned-url`
-- [ ] `POST /api/v1/audio-files`
-- [ ] `GET /api/v1/audio-files/{audioFileId}`
-- [ ] `DELETE /api/v1/audio-files/{audioFileId}`
 - [ ] `POST /api/v1/analysis-jobs`
 - [ ] `GET /api/v1/analysis-jobs`
 - [ ] `GET /api/v1/analysis-jobs/{jobId}`
@@ -57,4 +57,5 @@
 - [ ] Auth API live validation against a real DB
 - [ ] Children API live validation against a real DB
 - [ ] Sessions API live validation against a real DB
+- [ ] Audio Files API live validation against real DB/S3
 - [ ] OpenAPI route list review against `API 명세서.md`

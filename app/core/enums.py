@@ -40,6 +40,14 @@ class SessionStatus(StrEnum):
     DELETED = "DELETED"
 
 
+class AudioFileStatus(StrEnum):
+    """Audio file lifecycle states from presigned upload to soft delete."""
+
+    PENDING = "PENDING"
+    UPLOADED = "UPLOADED"
+    DELETED = "DELETED"
+
+
 class AccessGrantLevel(StrEnum):
     """Child sharing permission levels for guardians and viewers."""
 

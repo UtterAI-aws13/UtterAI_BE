@@ -20,14 +20,15 @@
 
 이번 작업 범위는 다음까지다.
 
-- [x] Auth refresh token 저장 구조 추가
-- [x] Auth refresh API 추가
-- [x] Auth logout API 추가
-- [x] API 명세서와 API 진행 추적 문서 정렬
-- [ ] 실제 DB 연결 기반 auth refresh/logout 수동 검증
+- [x] Audio file 모델 및 마이그레이션 추가
+- [x] Presigned URL 발급 API 추가
+- [x] 업로드 완료 처리 API 추가
+- [x] Audio metadata 조회/삭제 API 추가
+- [x] API 명세서와 API 진행 추적 문서 갱신
+- [ ] 실제 DB/S3 연결 기반 audio 업로드 수동 검증
 
 ## Next Recommended Steps
 
 - [ ] 권한 정책 모듈 구체화
-- [ ] audio/upload 도메인 구현
+- [ ] analysis job 도메인 구현
 - [ ] 테스트 프레임워크와 기본 테스트 추가
