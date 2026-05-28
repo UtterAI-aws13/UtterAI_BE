@@ -94,6 +94,17 @@ class TranscriptBulkUpdateRequest(BaseModel):
     segments: list[TranscriptBulkUpdateItem]
 
 
+class TranscriptSegmentCreateRequest(BaseModel):
+    """Payload for manually adding a missing transcript segment."""
+
+    speaker_label: str | None = Field(default=None, max_length=50)
+    speaker_role: SpeakerRole | None = None
+    start_time: float | None = Field(default=None, ge=0)
+    end_time: float | None = Field(default=None, ge=0)
+    text: str | None = None
+    edit_reason: str | None = None
+
+
 class TranscriptConfirmResponse(BaseModel):
     """Response returned after transcript confirmation."""
 

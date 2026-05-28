@@ -18,6 +18,7 @@ from app.schemas.transcript import (
     AnalysisResultCallbackRequest,
     TranscriptBulkUpdateRequest,
     TranscriptConfirmResponse,
+    TranscriptSegmentCreateRequest,
     TranscriptRead,
     TranscriptSegmentRead,
     TranscriptSegmentUpdateRequest,
@@ -207,8 +208,67 @@ class TranscriptService:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="No transcript segments were provided for bulk update.",
-            )
+        )
         return self.get_transcript_by_session(session_id, current_user)
+
+    def add_segment(
+        self,
+        result_id: uuid.UUID,
+        request: TranscriptSegmentCreateRequest,
+        current_user: UserRead,
+    ) -> TranscriptSegmentRead:
+        """Append a manually created transcript segment to an existing transcript."""
+
+        result = self.analysis_result_repository.get_result_by_id(result_id)
+        if result is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Analysis result not found.",
+            )
+        self._get_accessible_session(result.session_id, current_user)
+
+        speaker_id = None
+        if request.speaker_label is not None:
+            speakers = self.analysis_result_repository.list_speakers_by_session(result.session_id)
+            speaker = next((item for item in speakers if item.speaker_label == request.speaker_label), None)
+            if speaker is None:
+                speaker = Speaker(
+                    session_id=result.session_id,
+                    speaker_label=request.speaker_label,
+                    speaker_role=request.speaker_role or SpeakerRole.UNKNOWN,
+                )
+                speaker = self.analysis_result_repository.create_speaker(speaker)
+            elif request.speaker_role is not None:
+                speaker.speaker_role = request.speaker_role
+                speaker = self.analysis_result_repository.update_speaker(speaker)
+            speaker_id = speaker.id if speaker is not None else None
+
+        utterance = Utterance(
+            session_id=result.session_id,
+            speaker_id=speaker_id,
+            speaker_label=request.speaker_label,
+            start_time=request.start_time,
+            end_time=request.end_time,
+            original_text=None,
+            edited_text=request.text,
+            confidence=None,
+            is_confirmed=False,
+        )
+        stored = self.analysis_result_repository.update_utterance(utterance)
+
+        history = UtteranceEditHistory(
+            utterance_id=stored.id,
+            session_id=stored.session_id,
+            edited_by=current_user.id,
+            previous_text=None,
+            new_text=stored.edited_text,
+            previous_speaker_role=None,
+            new_speaker_role=request.speaker_role.value if request.speaker_role is not None else None,
+            edit_reason=request.edit_reason,
+            created_at=datetime.now(UTC),
+        )
+        self.analysis_result_repository.create_edit_history(history)
+        return self._build_segment_read(stored)
 
     def confirm_transcript(
         self,
@@ -238,6 +298,18 @@ class TranscriptService:
             confirmed_segments=confirmed_count,
             message="Transcript confirmed successfully.",
         )
+
+    def delete_segment(
+        self,
+        segment_id: uuid.UUID,
+        current_user: UserRead,
+    ) -> TranscriptRead:
+        """Delete one transcript segment from an accessible transcript."""
+
+        utterance = self._get_accessible_utterance(segment_id, current_user)
+        session_id = utterance.session_id
+        self.analysis_result_repository.delete_utterance(utterance)
+        return self.get_transcript_by_session(session_id, current_user)
 
     def _get_accessible_session(
         self,

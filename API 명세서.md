@@ -137,8 +137,8 @@
 | 구현됨 | 세션 전사 결과 조회 | 치료사, 관리자 | GET | `/api/v1/sessions/{sessionId}/transcript` | - | - | 특정 세션의 전사 결과 조회 |
 | 구현됨 | 전사 문장 수정 | 치료사, 관리자 | PATCH | `/api/v1/transcripts/{resultId}/segments/{segmentId}` | - | `text`, `speaker_role`, `edit_reason(optional)` | 특정 발화 구간 수정 |
 | 구현됨 | 전사 결과 일괄 수정 | 치료사, 관리자 | PATCH | `/api/v1/transcripts/{resultId}/segments` | - | `segments` | 여러 발화 구간 일괄 수정 |
-| 미구현 | 전사 구간 추가 | 치료사 | POST | `/api/v1/transcripts/{transcriptId}/segments` | - | `speakerLabel`, `startTime`, `endTime`, `text` | 누락된 구간 추가 |
-| 미구현 | 전사 구간 삭제 | 치료사 | DELETE | `/api/v1/transcripts/{transcriptId}/segments/{segmentId}` | - | - | 잘못 생성된 구간 삭제 |
+| 구현됨 | 전사 구간 추가 | 치료사, 관리자 | POST | `/api/v1/transcripts/{resultId}/segments` | - | `speaker_label`, `speaker_role(optional)`, `start_time`, `end_time`, `text`, `edit_reason(optional)` | 누락된 구간 추가 |
+| 구현됨 | 전사 구간 삭제 | 치료사, 관리자 | DELETE | `/api/v1/transcripts/{resultId}/segments/{segmentId}` | - | - | 잘못 생성된 구간 삭제 |
 | 구현됨 | 전사 결과 확정 | 치료사, 관리자 | PATCH | `/api/v1/transcripts/{resultId}/confirm` | - | - | 수정 완료 전사본 확정 |
 
 ### 구현 메모
@@ -153,11 +153,11 @@
 
 | 상태 | 기능 | 사용자 | Method | URL | Query Param | Request Body | 설명 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 미구현 | 분석 결과 조회 | 치료사, 관리자 | GET | `/api/v1/analysis-results/{resultId}` | - | - | 전체 분석 결과 조회 |
-| 미구현 | 세션별 분석 결과 조회 | 치료사, 관리자 | GET | `/api/v1/sessions/{sessionId}/analysis-results` | - | - | 세션별 분석 결과 조회 |
+| 구현됨 | 분석 결과 조회 | 치료사, 관리자 | GET | `/api/v1/analysis-results/{resultId}` | - | - | 전체 분석 결과 조회 |
+| 구현됨 | 세션별 분석 결과 조회 | 치료사, 관리자 | GET | `/api/v1/sessions/{sessionId}/analysis-results` | - | - | 세션별 분석 결과 조회 |
 | 미구현 | 전사 결과 조회 | 치료사, 관리자 | GET | `/api/v1/analysis-results/{resultId}/transcripts` | - | - | STT 전사 결과 조회 |
 | 미구현 | 화자 분리 결과 조회 | 치료사, 관리자 | GET | `/api/v1/analysis-results/{resultId}/speakers` | - | - | 화자별 발화 구간 조회 |
-| 미구현 | 언어 지표 조회 | 치료사, 관리자 | GET | `/api/v1/analysis-results/{resultId}/metrics` | - | - | 발화량, MLU, TTR 등 조회 |
+| 구현됨 | 언어 지표 조회 | 치료사, 관리자 | GET | `/api/v1/analysis-results/{resultId}/metrics` | - | - | 저장된 metrics payload 조회 |
 
 ---
 

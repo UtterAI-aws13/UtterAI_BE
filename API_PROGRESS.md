@@ -17,9 +17,9 @@
 | Children | 구현됨 | CRUD 및 therapist/admin 접근 제어 구현 완료 |
 | Sessions | 구현됨 | CRUD 및 therapist/admin 접근 제어 구현 완료 |
 | Audio Files | 구현됨 | presigned URL, complete, detail, delete 구현 완료. live S3/DB 검증만 남음 |
-| Analysis Jobs | 부분 구현 | 요청, 목록, 상세, 취소, progress callback 구현 완료. result callback 미구현 |
-| Transcripts | 부분 구현 | result callback, 조회, 수정, bulk 수정, confirm 구현 완료. add/delete 미구현 |
-| Analysis Results | 부분 구현 | internal result callback 기반 저장 완료. 전용 조회 계열 미구현 |
+| Analysis Jobs | 구현됨 | 요청, 목록, 상세, 취소, progress callback 구현 완료. live 검증만 남음 |
+| Transcripts | 구현됨 | result callback, 조회, 수정, bulk 수정, add/delete, confirm 구현 완료. live 검증만 남음 |
+| Analysis Results | 부분 구현 | internal result callback 저장, detail/session/metrics 조회 구현 완료. transcript/speaker 전용 조회 미구현 |
 | SOAP Notes | 미구현 | 생성/수정/확정 미구현 |
 | Reports | 미구현 | 생성/조회/다운로드 미구현 |
 
@@ -54,15 +54,20 @@
 - [x] `GET /api/v1/sessions/{sessionId}/transcript`
 - [x] `PATCH /api/v1/transcripts/{resultId}/segments/{segmentId}`
 - [x] `PATCH /api/v1/transcripts/{resultId}/segments`
+- [x] `POST /api/v1/transcripts/{resultId}/segments`
+- [x] `DELETE /api/v1/transcripts/{resultId}/segments/{segmentId}`
 - [x] `PATCH /api/v1/transcripts/{resultId}/confirm`
+- [x] `GET /api/v1/analysis-results/{resultId}`
+- [x] `GET /api/v1/sessions/{sessionId}/analysis-results`
+- [x] `GET /api/v1/analysis-results/{resultId}/metrics`
 
 ## Remaining Near-Term APIs
 
-- [ ] `POST /api/v1/transcripts/{resultId}/segments`
-- [ ] `DELETE /api/v1/transcripts/{resultId}/segments/{segmentId}`
-- [ ] `GET /api/v1/analysis-results/{resultId}`
-- [ ] `GET /api/v1/sessions/{sessionId}/analysis-results`
-- [ ] `GET /api/v1/analysis-results/{resultId}/metrics`
+- [ ] `GET /api/v1/analysis-results/{resultId}/transcripts`
+- [ ] `GET /api/v1/analysis-results/{resultId}/speakers`
+- [ ] `POST /api/v1/soap-notes/generate`
+- [ ] `GET /api/v1/soap-notes`
+- [ ] `GET /api/v1/soap-notes/{noteId}`
 
 ## Validation Status
 
@@ -72,4 +77,5 @@
 - [ ] Audio Files API live validation against real DB/S3
 - [ ] Analysis Jobs API live validation against real DB/AI callback mock
 - [ ] Transcript/result callback live validation against real DB/callback mock
+- [ ] Analysis result read APIs live validation against a real DB
 - [ ] OpenAPI route list review against `API 명세서.md`
