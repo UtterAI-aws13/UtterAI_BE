@@ -72,12 +72,12 @@
 - [x] `GET /api/v1/reports/{reportId}`
 - [x] `PATCH /api/v1/reports/{reportId}`
 - [x] `GET /api/v1/reports/{reportId}/download`
+- [x] `GET /api/v1/sessions/{sessionId}/reports`
 
 ## Remaining Near-Term APIs
 
 - [ ] `GET /api/v1/analysis-results/{resultId}/transcripts`
 - [ ] `GET /api/v1/analysis-results/{resultId}/speakers`
-- [ ] `GET /api/v1/sessions/{sessionId}/reports`
 
 ## Validation Status
 
@@ -92,4 +92,5 @@
 - [ ] SOAP Note lifecycle API live validation against a real DB
 - [ ] Report generation/read/download live validation against a real DB
 - [ ] Report edit API live validation against a real DB
+- [ ] Session-scoped report list API live validation against a real DB
 - [ ] OpenAPI route list review against `API 명세서.md`
