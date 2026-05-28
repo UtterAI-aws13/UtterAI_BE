@@ -20,18 +20,17 @@
 
 이번 작업 범위는 다음까지다.
 
-- [x] analysis result transcript read schema 추가
-- [x] analysis result speaker read schema 추가
-- [x] `GET /api/v1/analysis-results/{resultId}/transcripts` API 추가
-- [x] `GET /api/v1/analysis-results/{resultId}/speakers` API 추가
-- [x] 기존 세션 접근 권한 체크 재사용
-- [x] API 명세서와 API 진행 추적 문서 갱신
-- [ ] 실제 DB 기반 analysis result read 수동 검증
+- [x] `.env.example` 추가
+- [x] 로컬 PostgreSQL docker compose 파일 추가
+- [x] 로컬 실행/검증 가이드 문서 추가
+- [x] README에 실제 DB 검증 시작 절차 추가
+- [x] 개발자가 준비해야 할 항목과 다음 단계 정리
+- [ ] 실제 PostgreSQL 기반 happy-path 수동 검증
 
 ## Next Recommended Steps
 
 - [ ] 권한 정책 모듈 구체화
 - [ ] analysis-result transcript/speaker read API 보완
-- [ ] session summary API 구현
-- [ ] admin users API 구현 여부 결정
+- [ ] 실제 DB 붙여 happy-path 검증
+- [ ] pytest 기반 API 테스트 추가
 - [ ] 테스트 프레임워크와 기본 테스트 추가

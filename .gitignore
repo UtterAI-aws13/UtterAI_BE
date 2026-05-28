@@ -20,3 +20,7 @@ Thumbs.db
 # Environment files contain local secrets and machine-specific configuration.
 .env
 .env.*
+!.env.example
+
+# Local design/planning docs not intended for the repository.
+claude_design_prompt.md
