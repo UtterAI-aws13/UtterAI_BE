@@ -20,17 +20,18 @@
 
 이번 작업 범위는 다음까지다.
 
-- [x] session_id 기반 report repository 필터 추가
-- [x] session-scoped report service 조회 추가
-- [x] `GET /api/v1/sessions/{sessionId}/reports` API 추가
-- [x] 세션 접근 권한 체크 재사용
+- [x] analysis result transcript read schema 추가
+- [x] analysis result speaker read schema 추가
+- [x] `GET /api/v1/analysis-results/{resultId}/transcripts` API 추가
+- [x] `GET /api/v1/analysis-results/{resultId}/speakers` API 추가
+- [x] 기존 세션 접근 권한 체크 재사용
 - [x] API 명세서와 API 진행 추적 문서 갱신
-- [ ] 실제 DB 기반 session-scoped report list 수동 검증
+- [ ] 실제 DB 기반 analysis result read 수동 검증
 
 ## Next Recommended Steps
 
 - [ ] 권한 정책 모듈 구체화
 - [ ] analysis-result transcript/speaker read API 보완
-- [ ] analysis-results transcript read API 구현
-- [ ] analysis-results speakers read API 구현
+- [ ] session summary API 구현
+- [ ] admin users API 구현 여부 결정
 - [ ] 테스트 프레임워크와 기본 테스트 추가

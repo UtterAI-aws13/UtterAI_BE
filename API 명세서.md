@@ -155,8 +155,8 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 구현됨 | 분석 결과 조회 | 치료사, 관리자 | GET | `/api/v1/analysis-results/{resultId}` | - | - | 전체 분석 결과 조회 |
 | 구현됨 | 세션별 분석 결과 조회 | 치료사, 관리자 | GET | `/api/v1/sessions/{sessionId}/analysis-results` | - | - | 세션별 분석 결과 조회 |
-| 미구현 | 전사 결과 조회 | 치료사, 관리자 | GET | `/api/v1/analysis-results/{resultId}/transcripts` | - | - | STT 전사 결과 조회 |
-| 미구현 | 화자 분리 결과 조회 | 치료사, 관리자 | GET | `/api/v1/analysis-results/{resultId}/speakers` | - | - | 화자별 발화 구간 조회 |
+| 구현됨 | 전사 결과 조회 | 치료사, 관리자 | GET | `/api/v1/analysis-results/{resultId}/transcripts` | - | - | analysis result 네임스페이스에서 STT 전사 결과를 조회한다. |
+| 구현됨 | 화자 분리 결과 조회 | 치료사, 관리자 | GET | `/api/v1/analysis-results/{resultId}/speakers` | - | - | 화자 라벨, 역할, 발화 수를 조회한다. |
 | 구현됨 | 언어 지표 조회 | 치료사, 관리자 | GET | `/api/v1/analysis-results/{resultId}/metrics` | - | - | 저장된 metrics payload 조회 |
 
 ---
