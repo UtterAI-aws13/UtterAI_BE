@@ -14,6 +14,7 @@ from app.core.enums import (
     AnalysisJobStatus,
     ChildStatus,
     SessionStatus,
+    SpeakerRole,
     UserRole,
     UserStatus,
 )
@@ -245,3 +246,118 @@ class AnalysisJob(TimestampMixin, Base):
     requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class AnalysisResult(TimestampMixin, Base):
+    """Store analysis outputs and file pointers returned by the AI service."""
+
+    __tablename__ = "analysis_results"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    job_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("analysis_jobs.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("sessions.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    summary_json: Mapped[dict | None] = mapped_column(nullable=True)
+    metrics_json: Mapped[dict | None] = mapped_column(nullable=True)
+    interpretation_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    transcript_s3_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+    metrics_s3_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+    raw_result_s3_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+    report_s3_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class Speaker(TimestampMixin, Base):
+    """Store AI-produced speaker labels and therapist-assigned role mapping."""
+
+    __tablename__ = "speakers"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("sessions.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    speaker_label: Mapped[str] = mapped_column(String(50), nullable=False)
+    speaker_role: Mapped[SpeakerRole] = mapped_column(
+        Enum(SpeakerRole, name="speaker_role"),
+        nullable=False,
+        default=SpeakerRole.UNKNOWN,
+        server_default=SpeakerRole.UNKNOWN.value,
+    )
+
+
+class Utterance(TimestampMixin, Base):
+    """Store transcript segments created by STT and later edited by users."""
+
+    __tablename__ = "utterances"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("sessions.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    speaker_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("speakers.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    speaker_label: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    start_time: Mapped[float | None] = mapped_column(nullable=True)
+    end_time: Mapped[float | None] = mapped_column(nullable=True)
+    original_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    edited_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    confidence: Mapped[float | None] = mapped_column(nullable=True)
+    is_confirmed: Mapped[bool] = mapped_column(nullable=False, default=False, server_default="false")
+
+
+class UtteranceEditHistory(Base):
+    """Append-only history table for transcript and speaker edits."""
+
+    __tablename__ = "utterance_edit_history"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    utterance_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("utterances.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("sessions.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    edited_by: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    previous_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    new_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    previous_speaker_role: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    new_speaker_role: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    edit_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

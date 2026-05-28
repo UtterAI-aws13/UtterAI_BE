@@ -2,5 +2,19 @@
 
 from app.models.base import Base
 from app.models.entities import AnalysisJob, AudioFile, Child, ChildAccessGrant, RefreshToken, Session, User
+from app.models.entities import AnalysisResult, Speaker, Utterance, UtteranceEditHistory
 
-__all__ = ["AnalysisJob", "AudioFile", "Base", "Child", "ChildAccessGrant", "RefreshToken", "Session", "User"]
+__all__ = [
+    "AnalysisJob",
+    "AnalysisResult",
+    "AudioFile",
+    "Base",
+    "Child",
+    "ChildAccessGrant",
+    "RefreshToken",
+    "Session",
+    "Speaker",
+    "User",
+    "Utterance",
+    "UtteranceEditHistory",
+]

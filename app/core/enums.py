@@ -60,6 +60,14 @@ class AnalysisJobStatus(StrEnum):
     EXPIRED = "EXPIRED"
 
 
+class SpeakerRole(StrEnum):
+    """Speaker-role mapping values used in transcript views and editing."""
+
+    CHILD = "CHILD"
+    THERAPIST = "THERAPIST"
+    UNKNOWN = "UNKNOWN"
+
+
 class AccessGrantLevel(StrEnum):
     """Child sharing permission levels for guardians and viewers."""
 

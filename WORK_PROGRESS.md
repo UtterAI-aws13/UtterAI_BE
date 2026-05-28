@@ -20,15 +20,16 @@
 
 이번 작업 범위는 다음까지다.
 
-- [x] Analysis job 모델 및 마이그레이션 추가
-- [x] Analysis job 생성/목록/상세/취소 API 추가
-- [x] 내부 progress callback API 추가
-- [x] AI 요청 dispatch client 추가
+- [x] Analysis result callback 저장 구조 추가
+- [x] Transcript 조회 API 추가
+- [x] Transcript 수정/일괄수정 API 추가
+- [x] Transcript confirm API 추가
+- [x] Transcript edit history 저장 구조 추가
 - [x] API 명세서와 API 진행 추적 문서 갱신
-- [ ] 실제 DB/AI callback mock 기반 analysis job 수동 검증
+- [ ] 실제 DB/callback mock 기반 transcript 수동 검증
 
 ## Next Recommended Steps
 
 - [ ] 권한 정책 모듈 구체화
-- [ ] transcript 조회/수정/확정 구현
+- [ ] SOAP Note 초안 생성 구현
 - [ ] 테스트 프레임워크와 기본 테스트 추가
