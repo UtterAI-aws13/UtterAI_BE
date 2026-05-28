@@ -39,11 +39,25 @@ class UserRead(BaseModel):
 
 
 class TokenResponse(BaseModel):
-    """Access-token response shape used after signup and login."""
+    """Access and refresh token response shape used after auth operations."""
 
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
     user: UserRead
+
+
+class RefreshRequest(BaseModel):
+    """Payload for exchanging a refresh token for a new token pair."""
+
+    refresh_token: str = Field(min_length=32, max_length=512)
+
+
+class LogoutResponse(BaseModel):
+    """Simple logout response acknowledging refresh token revocation."""
+
+    revoked_sessions: int
+    message: str
 
 
 class TokenPayload(BaseModel):
