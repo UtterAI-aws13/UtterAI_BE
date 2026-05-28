@@ -1,0 +1,22 @@
+# Python bytecode and cache directories do not belong in source control.
+__pycache__/
+*.py[cod]
+
+# Virtual environment directories vary by developer machine.
+.venv/
+venv/
+env/
+
+# Alembic may generate local sqlite files during experimentation.
+*.db
+*.sqlite3
+
+# IDE and OS noise should stay local.
+.idea/
+.vscode/
+Thumbs.db
+.DS_Store
+
+# Environment files contain local secrets and machine-specific configuration.
+.env
+.env.*
