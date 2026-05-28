@@ -12,6 +12,7 @@ from app.schemas.transcript import (
     AnalysisResultCallbackRequest,
     TranscriptBulkUpdateRequest,
     TranscriptConfirmResponse,
+    TranscriptSegmentCreateRequest,
     TranscriptRead,
     TranscriptSegmentRead,
     TranscriptSegmentUpdateRequest,
@@ -48,6 +49,19 @@ def update_transcript_segment(
     return service.update_segment(segment_id, request, current_user)
 
 
+@router.post("/{result_id}/segments", response_model=TranscriptSegmentRead, status_code=201)
+def add_transcript_segment(
+    result_id: uuid.UUID,
+    request: TranscriptSegmentCreateRequest,
+    current_user: UserRead = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> TranscriptSegmentRead:
+    """Add a missing transcript segment manually."""
+
+    service = TranscriptService(db)
+    return service.add_segment(result_id, request, current_user)
+
+
 @router.patch("/{result_id}/segments", response_model=TranscriptRead)
 def bulk_update_transcript_segments(
     result_id: uuid.UUID,
@@ -71,6 +85,19 @@ def confirm_transcript(
 
     service = TranscriptService(db)
     return service.confirm_transcript(result_id, current_user)
+
+
+@router.delete("/{result_id}/segments/{segment_id}", response_model=TranscriptRead)
+def delete_transcript_segment(
+    result_id: uuid.UUID,
+    segment_id: uuid.UUID,
+    current_user: UserRead = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> TranscriptRead:
+    """Delete a transcript segment from an accessible transcript."""
+
+    service = TranscriptService(db)
+    return service.delete_segment(segment_id, current_user)
 
 
 @internal_result_router.post("/callback", response_model=TranscriptRead)

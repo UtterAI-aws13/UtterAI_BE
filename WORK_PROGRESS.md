@@ -20,13 +20,11 @@
 
 이번 작업 범위는 다음까지다.
 
-- [x] Analysis result callback 저장 구조 추가
-- [x] Transcript 조회 API 추가
-- [x] Transcript 수정/일괄수정 API 추가
-- [x] Transcript confirm API 추가
-- [x] Transcript edit history 저장 구조 추가
+- [x] Transcript segment add/delete API 추가
+- [x] Analysis result detail/session/metrics 조회 API 추가
+- [x] API progress 문서 상태 불일치 정리
 - [x] API 명세서와 API 진행 추적 문서 갱신
-- [ ] 실제 DB/callback mock 기반 transcript 수동 검증
+- [ ] 실제 DB 기반 transcript/result 조회 수동 검증
 
 ## Next Recommended Steps
 

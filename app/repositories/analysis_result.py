@@ -40,6 +40,24 @@ class AnalysisResultRepository:
         )
         return self.db.execute(statement).scalar_one_or_none()
 
+    def list_speakers_by_session(self, session_id: uuid.UUID) -> list[Speaker]:
+        """Return ordered speaker mappings for a session transcript."""
+
+        statement = (
+            select(Speaker)
+            .where(Speaker.session_id == session_id)
+            .order_by(Speaker.created_at.asc())
+        )
+        return list(self.db.execute(statement).scalars().all())
+
+    def create_speaker(self, speaker: Speaker) -> Speaker:
+        """Persist one speaker mapping row and refresh it."""
+
+        self.db.add(speaker)
+        self.db.commit()
+        self.db.refresh(speaker)
+        return speaker
+
     def replace_speakers_and_utterances(
         self,
         session_id: uuid.UUID,
@@ -110,3 +128,9 @@ class AnalysisResultRepository:
         self.db.commit()
         self.db.refresh(history)
         return history
+
+    def delete_utterance(self, utterance: Utterance) -> None:
+        """Delete one utterance row and commit the change."""
+
+        self.db.delete(utterance)
+        self.db.commit()
