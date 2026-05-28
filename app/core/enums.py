@@ -80,3 +80,20 @@ class AccessGrantStatus(StrEnum):
 
     ACTIVE = "ACTIVE"
     REVOKED = "REVOKED"
+
+
+class SoapNoteStatus(StrEnum):
+    """SOAP note lifecycle states from draft creation to final retention."""
+
+    DRAFT = "DRAFT"
+    SAVED = "SAVED"
+    FINALIZED = "FINALIZED"
+    DELETED = "DELETED"
+
+
+class ReportStatus(StrEnum):
+    """Report lifecycle states kept intentionally small for the MVP."""
+
+    READY = "READY"
+    REGENERATING = "REGENERATING"
+    DELETED = "DELETED"

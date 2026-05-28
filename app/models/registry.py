@@ -1,8 +1,8 @@
 """Import ORM models in one place so Alembic can discover metadata reliably."""
 
 from app.models.base import Base
-from app.models.entities import AnalysisJob, AudioFile, Child, ChildAccessGrant, RefreshToken, Session, SoapNote, User
-from app.models.entities import AnalysisResult, Speaker, Utterance, UtteranceEditHistory
+from app.models.entities import AnalysisJob, AnalysisResult, AudioFile, Child, ChildAccessGrant, RefreshToken, Report
+from app.models.entities import Session, SoapNote, Speaker, User, Utterance, UtteranceEditHistory
 
 __all__ = [
     "AnalysisJob",
@@ -12,6 +12,7 @@ __all__ = [
     "Child",
     "ChildAccessGrant",
     "RefreshToken",
+    "Report",
     "Session",
     "SoapNote",
     "Speaker",

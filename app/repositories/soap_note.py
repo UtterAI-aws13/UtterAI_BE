@@ -52,3 +52,16 @@ class SoapNoteRepository:
             statement = statement.where(SessionEntity.child_id == child_id)
         statement = statement.order_by(SoapNote.created_at.desc())
         return list(self.db.execute(statement).scalars().all())
+
+    def get_latest_finalized_by_session(self, session_id: uuid.UUID) -> SoapNote | None:
+        """Return the newest finalized SOAP note for one session."""
+
+        statement = (
+            select(SoapNote)
+            .where(
+                SoapNote.session_id == session_id,
+                SoapNote.status == SoapNoteStatus.FINALIZED,
+            )
+            .order_by(SoapNote.created_at.desc())
+        )
+        return self.db.execute(statement).scalar_one_or_none()

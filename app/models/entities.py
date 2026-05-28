@@ -13,6 +13,7 @@ from app.core.enums import (
     AudioFileStatus,
     AnalysisJobStatus,
     ChildStatus,
+    ReportStatus,
     SessionStatus,
     SoapNoteStatus,
     SpeakerRole,
@@ -403,4 +404,46 @@ class SoapNote(TimestampMixin, Base):
         nullable=False,
         default=SoapNoteStatus.DRAFT,
         server_default=SoapNoteStatus.DRAFT.value,
+    )
+
+
+class Report(TimestampMixin, Base):
+    """Persist generated clinician-facing reports derived from session artifacts."""
+
+    __tablename__ = "reports"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("sessions.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    result_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("analysis_results.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    soap_note_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("soap_notes.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    generated_by: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    template_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    memo: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[ReportStatus] = mapped_column(
+        Enum(ReportStatus, name="report_status"),
+        nullable=False,
+        default=ReportStatus.READY,
+        server_default=ReportStatus.READY.value,
     )
