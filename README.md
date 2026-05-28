@@ -16,6 +16,7 @@ UtterAI backend repository.
 - `utterai_functional_backend_architecture.md`
 - `API 명세서.md`
 - `API_PROGRESS.md`
+- `LOCAL_DEV_SETUP.md`
 
 ## Implementation Reference
 
@@ -38,3 +39,15 @@ UtterAI backend repository.
 - 문서 작업은 `docs/*`
 
 상세 규칙은 `CONTRIBUTING.md`를 따른다.
+
+## Local Verification
+
+실제 PostgreSQL을 붙여서 검증할 때는 아래 순서로 시작한다.
+
+1. `.env.example`를 `.env`로 복사
+2. `python -m pip install -e .[dev]`
+3. `docker compose -f docker-compose.local.yml up -d`
+4. `alembic upgrade head`
+5. `uvicorn app.main:app --reload`
+
+상세 체크리스트와 준비물은 `LOCAL_DEV_SETUP.md`를 기준으로 진행한다.
