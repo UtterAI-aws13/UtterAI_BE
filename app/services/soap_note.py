@@ -6,13 +6,13 @@ import uuid
 
 from fastapi import HTTPException, status
 
-from app.core.enums import SessionStatus, UserRole
+from app.core.enums import SessionStatus, SoapNoteStatus, UserRole
 from app.models.entities import SoapNote
 from app.repositories.analysis_result import AnalysisResultRepository
 from app.repositories.session import SessionRepository
 from app.repositories.soap_note import SoapNoteRepository
 from app.schemas.auth import UserRead
-from app.schemas.soap_note import SoapNoteGenerateRequest, SoapNoteRead
+from app.schemas.soap_note import SoapNoteGenerateRequest, SoapNoteRead, SoapNoteUpdateRequest
 
 
 class SoapNoteService:
@@ -111,6 +111,74 @@ class SoapNoteService:
         self._get_accessible_session(note.session_id, current_user)
         return SoapNoteRead.model_validate(note)
 
+    def update(
+        self,
+        note_id: uuid.UUID,
+        request: SoapNoteUpdateRequest,
+        current_user: UserRead,
+    ) -> SoapNoteRead:
+        """Edit a SOAP note while it is still mutable.
+
+        Finalized notes are treated as immutable clinician output. Draft and
+        saved notes can still be edited by the owning therapist or an admin.
+        """
+
+        note = self._get_accessible_note(note_id, current_user)
+        if note.status == SoapNoteStatus.FINALIZED:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Finalized SOAP notes cannot be edited.",
+            )
+
+        update_data = request.model_dump(exclude_unset=True)
+        for field_name, value in update_data.items():
+            setattr(note, field_name, value)
+
+        self.soap_note_repository.db.add(note)
+        self.soap_note_repository.db.commit()
+        self.soap_note_repository.db.refresh(note)
+        return SoapNoteRead.model_validate(note)
+
+    def save(self, note_id: uuid.UUID, current_user: UserRead) -> SoapNoteRead:
+        """Mark a mutable SOAP note as saved."""
+
+        note = self._get_accessible_note(note_id, current_user)
+        if note.status == SoapNoteStatus.FINALIZED:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Finalized SOAP notes cannot be moved back to saved.",
+            )
+        note.status = SoapNoteStatus.SAVED
+        self.soap_note_repository.db.add(note)
+        self.soap_note_repository.db.commit()
+        self.soap_note_repository.db.refresh(note)
+        return SoapNoteRead.model_validate(note)
+
+    def finalize(self, note_id: uuid.UUID, current_user: UserRead) -> SoapNoteRead:
+        """Finalize a SOAP note and block future edits."""
+
+        note = self._get_accessible_note(note_id, current_user)
+        if note.status == SoapNoteStatus.DELETED:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Deleted SOAP notes cannot be finalized.",
+            )
+        note.status = SoapNoteStatus.FINALIZED
+        self.soap_note_repository.db.add(note)
+        self.soap_note_repository.db.commit()
+        self.soap_note_repository.db.refresh(note)
+        return SoapNoteRead.model_validate(note)
+
+    def delete(self, note_id: uuid.UUID, current_user: UserRead) -> SoapNoteRead:
+        """Soft-delete a SOAP note while preserving auditability."""
+
+        note = self._get_accessible_note(note_id, current_user)
+        note.status = SoapNoteStatus.DELETED
+        self.soap_note_repository.db.add(note)
+        self.soap_note_repository.db.commit()
+        self.soap_note_repository.db.refresh(note)
+        return SoapNoteRead.model_validate(note)
+
     def _get_accessible_session(self, session_id: uuid.UUID, current_user: UserRead):
         """Load a session and enforce therapist ownership or admin override."""
 
@@ -128,3 +196,15 @@ class SoapNoteService:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have access to this SOAP note.",
         )
+
+    def _get_accessible_note(self, note_id: uuid.UUID, current_user: UserRead) -> SoapNote:
+        """Load a SOAP note and enforce session-based access rules."""
+
+        note = self.soap_note_repository.get_by_id(note_id)
+        if note is None or note.status == SoapNoteStatus.DELETED:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="SOAP note not found.",
+            )
+        self._get_accessible_session(note.session_id, current_user)
+        return note
