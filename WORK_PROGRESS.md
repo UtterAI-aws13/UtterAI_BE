@@ -11,23 +11,24 @@
 - [x] 공통 enum과 상태 규칙 코드화
 - [x] Alembic 초기 설정 추가
 - [x] 핵심 테이블 초기 마이그레이션 작성
-- [ ] Auth 도메인 1차 구현
+- [x] Auth 도메인 1차 구현
 - [ ] Child/Session CRUD 1차 구현
 
 ## Current Scope
 
 이번 작업 범위는 다음까지다.
 
-- [x] `pyproject.toml` 추가
-- [x] `app/` 패키지 구조 추가
-- [x] 설정/DB/라우터 기본 코드 추가
-- [x] `users`, `children`, `sessions`, `child_access_grants` 모델 추가
-- [x] Alembic 환경 및 첫 마이그레이션 추가
-- [x] 로컬 정적 검증 수행
+- [x] 회원가입 API 추가
+- [x] 로그인 API 추가
+- [x] 현재 사용자 조회 API 추가
+- [x] 비밀번호 해싱 유틸 추가
+- [x] JWT 생성/검증 유틸 추가
+- [x] 사용자 조회/생성 repository 추가
+- [ ] 실제 DB 연결 기반 수동 API 검증
 
 ## Next Recommended Steps
 
-- [ ] 인증 도메인 상세 구현
+- [ ] refresh/logout 설계 및 구현
 - [ ] 세션/아동 CRUD API 작성
 - [ ] 권한 정책 모듈 구체화
 - [ ] 테스트 프레임워크와 기본 테스트 추가
