@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Architecture Document
+    url: https://github.com/UtterAI-aws13/UtterAI_BE/blob/dev/utterai_functional_backend_architecture.md
+    about: 구현 전 아키텍처 문서를 먼저 확인한다.
