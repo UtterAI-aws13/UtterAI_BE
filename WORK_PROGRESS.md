@@ -20,18 +20,16 @@
 
 이번 작업 범위는 다음까지다.
 
-- [x] reports 테이블 및 마이그레이션 추가
-- [x] Report 생성 API 추가
-- [x] Report 목록/상세 API 추가
-- [x] Report 다운로드 API 추가
-- [x] finalized SOAP Note 필요 규칙 추가
-- [x] 세션 상태 `REPORT_READY` 반영 규칙 추가
+- [x] Report 수정 request schema 추가
+- [x] Report 수정 service 로직 추가
+- [x] Report 수정 API 추가
+- [x] soft delete 리포트 수정 불가 규칙 유지
 - [x] API 명세서와 API 진행 추적 문서 갱신
-- [ ] 실제 DB 기반 report workflow 수동 검증
+- [ ] 실제 DB 기반 report edit 수동 검증
 
 ## Next Recommended Steps
 
 - [ ] 권한 정책 모듈 구체화
 - [ ] analysis-result transcript/speaker read API 보완
-- [ ] report 수정 API 구현
+- [ ] sessions/{sessionId}/reports read API 구현
 - [ ] 테스트 프레임워크와 기본 테스트 추가

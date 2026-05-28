@@ -188,11 +188,12 @@
 | 구현됨 | 리포트 생성 | 치료사, 관리자 | POST | `/api/v1/reports` | - | `sessionId`, `resultId`, `templateType` | finalized SOAP Note와 분석 결과를 기준으로 리포트를 생성한다. |
 | 구현됨 | 리포트 목록 조회 | 치료사, 관리자 | GET | `/api/v1/reports` | `childId(optional)` | - | 현재 사용자에게 보이는 리포트 목록을 조회한다. |
 | 구현됨 | 리포트 상세 조회 | 치료사, 관리자 | GET | `/api/v1/reports/{reportId}` | - | - | 리포트 본문과 메타데이터를 조회한다. |
-| 미구현 | 리포트 수정 | 치료사 | PATCH | `/api/v1/reports/{reportId}` | - | `title`, `content`, `memo` | 수동 수정 API는 후속 작업으로 남긴다. |
+| 구현됨 | 리포트 수정 | 치료사, 관리자 | PATCH | `/api/v1/reports/{reportId}` | - | `title`, `content`, `memo` | 생성된 리포트의 제목, 본문, 메모를 수동 수정한다. |
 | 구현됨 | 리포트 다운로드 | 치료사, 관리자 | GET | `/api/v1/reports/{reportId}/download` | - | - | MVP에서는 텍스트 첨부파일 다운로드를 제공하고 PDF 렌더링은 후속 작업으로 남긴다. |
 
 ### 구현 메모
 
 - 리포트 생성 전 세션에는 최소 1개의 `FINALIZED` SOAP Note가 있어야 한다.
 - 리포트 생성이 완료되면 세션 상태를 `REPORT_READY`로 올린다.
+- soft delete된 리포트는 수정할 수 없다.
 - 보호자/공유 사용자 대상 리포트 공개 정책과 PDF 렌더링 파이프라인은 아직 구현하지 않았다.
