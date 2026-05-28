@@ -19,7 +19,7 @@
 | Audio Files | 구현됨 | presigned URL, complete, detail, delete 구현 완료. live S3/DB 검증만 남음 |
 | Analysis Jobs | 구현됨 | 요청, 목록, 상세, 취소, progress callback 구현 완료. live 검증만 남음 |
 | Transcripts | 구현됨 | result callback, 조회, 수정, bulk 수정, add/delete, confirm 구현 완료. live 검증만 남음 |
-| Analysis Results | 부분 구현 | internal result callback 저장, detail/session/metrics 조회 구현 완료. transcript/speaker 전용 조회 미구현 |
+| Analysis Results | 구현됨 | internal result callback 저장, detail/session/metrics/transcript/speaker 조회 구현 완료. live 검증만 남음 |
 | SOAP Notes | 구현됨 | draft 생성, 목록, 상세, 수정, 저장, 확정, 삭제 구현 완료. live 검증만 남음 |
 | Reports | 구현됨 | 생성, 목록, 상세, 수정, 다운로드 구현 완료. live 검증만 남음 |
 
@@ -59,6 +59,8 @@
 - [x] `PATCH /api/v1/transcripts/{resultId}/confirm`
 - [x] `GET /api/v1/analysis-results/{resultId}`
 - [x] `GET /api/v1/sessions/{sessionId}/analysis-results`
+- [x] `GET /api/v1/analysis-results/{resultId}/transcripts`
+- [x] `GET /api/v1/analysis-results/{resultId}/speakers`
 - [x] `GET /api/v1/analysis-results/{resultId}/metrics`
 - [x] `POST /api/v1/soap-notes/generate`
 - [x] `GET /api/v1/soap-notes`
@@ -76,8 +78,8 @@
 
 ## Remaining Near-Term APIs
 
-- [ ] `GET /api/v1/analysis-results/{resultId}/transcripts`
-- [ ] `GET /api/v1/analysis-results/{resultId}/speakers`
+- [ ] `GET /api/v1/sessions/{sessionId}/summary`
+- [ ] `GET /api/v1/users`
 
 ## Validation Status
 

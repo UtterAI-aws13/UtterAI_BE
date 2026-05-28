@@ -6,6 +6,9 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
+from app.core.enums import SpeakerRole
+from app.schemas.transcript import TranscriptSegmentRead
+
 
 class AnalysisResultRead(BaseModel):
     """Public analysis result representation returned to clients."""
@@ -32,3 +35,29 @@ class AnalysisMetricsRead(BaseModel):
     result_id: uuid.UUID
     session_id: uuid.UUID
     metrics: dict[str, Any] | None
+
+
+class AnalysisResultTranscriptRead(BaseModel):
+    """Transcript payload returned from the analysis-results namespace."""
+
+    result_id: uuid.UUID
+    session_id: uuid.UUID
+    segments: list[TranscriptSegmentRead]
+
+
+class AnalysisResultSpeakerRead(BaseModel):
+    """One speaker mapping row returned from the analysis-results namespace."""
+
+    speaker_id: uuid.UUID
+    session_id: uuid.UUID
+    speaker_label: str
+    speaker_role: SpeakerRole
+    utterance_count: int
+
+
+class AnalysisResultSpeakerListRead(BaseModel):
+    """Speaker collection payload for one analysis result."""
+
+    result_id: uuid.UUID
+    session_id: uuid.UUID
+    speakers: list[AnalysisResultSpeakerRead]
