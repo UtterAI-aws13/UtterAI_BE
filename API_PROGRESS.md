@@ -21,7 +21,7 @@
 | Transcripts | 구현됨 | result callback, 조회, 수정, bulk 수정, add/delete, confirm 구현 완료. live 검증만 남음 |
 | Analysis Results | 부분 구현 | internal result callback 저장, detail/session/metrics 조회 구현 완료. transcript/speaker 전용 조회 미구현 |
 | SOAP Notes | 구현됨 | draft 생성, 목록, 상세, 수정, 저장, 확정, 삭제 구현 완료. live 검증만 남음 |
-| Reports | 미구현 | 생성/조회/다운로드 미구현 |
+| Reports | 구현됨 | 생성, 목록, 상세, 다운로드 구현 완료. live 검증만 남음 |
 
 ## Implemented APIs
 
@@ -67,15 +67,17 @@
 - [x] `PATCH /api/v1/soap-notes/{noteId}/save`
 - [x] `PATCH /api/v1/soap-notes/{noteId}/finalize`
 - [x] `DELETE /api/v1/soap-notes/{noteId}`
+- [x] `POST /api/v1/reports`
+- [x] `GET /api/v1/reports`
+- [x] `GET /api/v1/reports/{reportId}`
+- [x] `GET /api/v1/reports/{reportId}/download`
 
 ## Remaining Near-Term APIs
 
 - [ ] `GET /api/v1/analysis-results/{resultId}/transcripts`
 - [ ] `GET /api/v1/analysis-results/{resultId}/speakers`
-- [ ] `POST /api/v1/reports`
-- [ ] `GET /api/v1/reports`
-- [ ] `GET /api/v1/reports/{reportId}`
-- [ ] `GET /api/v1/reports/{reportId}/download`
+- [ ] `PATCH /api/v1/reports/{reportId}`
+- [ ] `GET /api/v1/sessions/{sessionId}/reports`
 
 ## Validation Status
 
@@ -88,4 +90,5 @@
 - [ ] Analysis result read APIs live validation against a real DB
 - [ ] SOAP Note draft workflow live validation against a real DB
 - [ ] SOAP Note lifecycle API live validation against a real DB
+- [ ] Report generation/read/download live validation against a real DB
 - [ ] OpenAPI route list review against `API 명세서.md`
