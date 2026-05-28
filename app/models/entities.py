@@ -1,4 +1,4 @@
-"""Initial ORM entities for the first backend milestone."""
+"""ORM entities for the current backend milestone."""
 
 import uuid
 from datetime import date, datetime
@@ -142,6 +142,37 @@ class ChildAccessGrant(TimestampMixin, Base):
     expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+
+class RefreshToken(Base):
+    """Persist refresh tokens so refresh/logout flows can revoke them safely.
+
+    Access tokens remain stateless JWTs, but refresh tokens are stored as hashes
+    so the backend can rotate them on refresh and revoke them during logout.
+    """
+
+    __tablename__ = "refresh_tokens"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    token_hash: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
     )
     revoked_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),

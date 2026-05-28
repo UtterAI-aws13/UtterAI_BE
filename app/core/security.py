@@ -1,5 +1,7 @@
-"""Password hashing and JWT helpers for authentication flows."""
+"""Password hashing, JWT helpers, and refresh token utilities."""
 
+import hashlib
+import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -60,3 +62,23 @@ def decode_access_token(token: str) -> dict[str, Any]:
         settings.jwt_secret_key,
         algorithms=[settings.jwt_algorithm],
     )
+
+
+def generate_refresh_token() -> str:
+    """Generate a high-entropy opaque refresh token for long-lived sessions.
+
+    Refresh tokens are intentionally opaque instead of JWTs so the server keeps
+    revocation control in the database and does not rely on client-held claims.
+    """
+
+    return secrets.token_urlsafe(48)
+
+
+def hash_refresh_token(token: str) -> str:
+    """Hash a refresh token before storing it in the database.
+
+    Storing a hash instead of the raw token limits damage if the refresh token
+    table is ever exposed, while still allowing exact-match lookup on refresh.
+    """
+
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()

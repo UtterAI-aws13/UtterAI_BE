@@ -5,7 +5,14 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
 from app.core.db import get_db_session
-from app.schemas.auth import LoginRequest, SignupRequest, TokenResponse, UserRead
+from app.schemas.auth import (
+    LoginRequest,
+    LogoutResponse,
+    RefreshRequest,
+    SignupRequest,
+    TokenResponse,
+    UserRead,
+)
 from app.services.auth import AuthService
 
 router = APIRouter()
@@ -42,3 +49,25 @@ def read_me(current_user: UserRead = Depends(get_current_user)) -> UserRead:
     """Return the authenticated user profile derived from the bearer token."""
 
     return current_user
+
+
+@router.post("/refresh", response_model=TokenResponse)
+def refresh_token(
+    request: RefreshRequest,
+    db: Session = Depends(get_db_session),
+) -> TokenResponse:
+    """Rotate a refresh token and return a fresh access/refresh pair."""
+
+    service = AuthService(db)
+    return service.refresh(request)
+
+
+@router.post("/logout", response_model=LogoutResponse)
+def logout(
+    current_user: UserRead = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> LogoutResponse:
+    """Revoke active refresh tokens for the authenticated user."""
+
+    service = AuthService(db)
+    return service.logout(current_user)
