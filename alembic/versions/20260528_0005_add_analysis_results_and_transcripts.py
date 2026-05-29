@@ -13,9 +13,9 @@ depends_on = None
 def upgrade() -> None:
     """Create transcript-related tables needed after analysis completion."""
 
-    speaker_role = sa.Enum("CHILD", "THERAPIST", "UNKNOWN", name="speaker_role")
+    speaker_role = sa.Enum("CHILD", "THERAPIST", "UNKNOWN", name="speaker_role", _create_events=False)
     bind = op.get_bind()
-    speaker_role.create(bind, checkfirst=True)
+    sa.Enum("CHILD", "THERAPIST", "UNKNOWN", name="speaker_role").create(bind, checkfirst=True)
 
     op.create_table(
         "analysis_results",

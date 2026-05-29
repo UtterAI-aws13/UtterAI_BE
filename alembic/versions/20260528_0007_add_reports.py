@@ -14,13 +14,11 @@ def upgrade() -> None:
     """Create the reports table and its lifecycle enum."""
 
     report_status = sa.Enum(
-        "READY",
-        "REGENERATING",
-        "DELETED",
-        name="report_status",
+        "READY", "REGENERATING", "DELETED",
+        name="report_status", _create_events=False,
     )
     bind = op.get_bind()
-    report_status.create(bind, checkfirst=True)
+    sa.Enum("READY", "REGENERATING", "DELETED", name="report_status").create(bind, checkfirst=True)
 
     op.create_table(
         "reports",

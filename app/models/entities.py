@@ -3,9 +3,10 @@
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, Enum, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import Date, DateTime, Enum, ForeignKey, JSON, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
+from typing import Any
 
 from app.core.enums import (
     AccessGrantLevel,
@@ -270,8 +271,8 @@ class AnalysisResult(TimestampMixin, Base):
         ForeignKey("sessions.id", ondelete="RESTRICT"),
         nullable=False,
     )
-    summary_json: Mapped[dict | None] = mapped_column(nullable=True)
-    metrics_json: Mapped[dict | None] = mapped_column(nullable=True)
+    summary_json: Mapped[Any | None] = mapped_column(JSON, nullable=True)
+    metrics_json: Mapped[Any | None] = mapped_column(JSON, nullable=True)
     interpretation_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     transcript_s3_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     metrics_s3_key: Mapped[str | None] = mapped_column(Text, nullable=True)

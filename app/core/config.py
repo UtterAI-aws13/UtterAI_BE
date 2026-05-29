@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     ai_service_analysis_path: str = "/internal/ai/analysis-jobs"
     public_api_base_url: str = "http://localhost:8000"
 
+    cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
+
 
 @lru_cache
 def get_settings() -> Settings:
