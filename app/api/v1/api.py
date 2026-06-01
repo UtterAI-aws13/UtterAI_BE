@@ -13,6 +13,7 @@ from app.api.v1.endpoints.session_transcript import router as session_transcript
 from app.api.v1.endpoints.sessions import router as sessions_router
 from app.api.v1.endpoints.report import router as report_router
 from app.api.v1.endpoints.soap_note import router as soap_note_router
+from app.api.v1.endpoints.templates import router as templates_router
 from app.api.v1.endpoints.transcript import internal_result_router as transcript_internal_result_router
 from app.api.v1.endpoints.transcript import router as transcript_router
 
@@ -30,6 +31,7 @@ api_v1_router.include_router(analysis_router, prefix="/analysis-jobs", tags=["an
 api_v1_router.include_router(analysis_result_router, prefix="/analysis-results", tags=["analysis-results"])
 api_v1_router.include_router(report_router, prefix="/reports", tags=["reports"])
 api_v1_router.include_router(soap_note_router, prefix="/soap-notes", tags=["soap-notes"])
+api_v1_router.include_router(templates_router, prefix="/templates", tags=["templates"])
 api_v1_router.include_router(transcript_router, prefix="/transcripts", tags=["transcripts"])
 api_v1_router.include_router(
     analysis_internal_router,

@@ -14,45 +14,41 @@ depends_on = None
 def upgrade() -> None:
     """Create the first set of tables required for ownership and access rules."""
 
+    # _create_events=False: op.create_table 이 중복 CREATE TYPE 을 시도하지 않도록 방지
+    # 실제 타입 생성은 아래 명시적 .create(checkfirst=True) 호출이 담당
     user_role = sa.Enum(
-        "ADMIN",
-        "THERAPIST",
-        "GUARDIAN",
-        "VIEWER",
-        name="user_role",
+        "ADMIN", "THERAPIST", "GUARDIAN", "VIEWER",
+        name="user_role", _create_events=False,
     )
-    user_status = sa.Enum("ACTIVE", "INACTIVE", name="user_status")
-    child_status = sa.Enum("ACTIVE", "DELETED", name="child_status")
+    user_status = sa.Enum("ACTIVE", "INACTIVE", name="user_status", _create_events=False)
+    child_status = sa.Enum("ACTIVE", "DELETED", name="child_status", _create_events=False)
     session_status = sa.Enum(
-        "CREATED",
-        "AUDIO_UPLOADING",
-        "AUDIO_UPLOADED",
-        "ANALYSIS_REQUESTED",
-        "ANALYSIS_PROCESSING",
-        "ANALYSIS_COMPLETED",
-        "REPORT_READY",
-        "FAILED",
-        "DELETED",
-        name="session_status",
+        "CREATED", "AUDIO_UPLOADING", "AUDIO_UPLOADED",
+        "ANALYSIS_REQUESTED", "ANALYSIS_PROCESSING", "ANALYSIS_COMPLETED",
+        "REPORT_READY", "FAILED", "DELETED",
+        name="session_status", _create_events=False,
     )
     access_grant_level = sa.Enum(
-        "VIEW_RESULT",
-        "VIEW_AND_DOWNLOAD",
-        name="access_grant_level",
+        "VIEW_RESULT", "VIEW_AND_DOWNLOAD",
+        name="access_grant_level", _create_events=False,
     )
     access_grant_status = sa.Enum(
-        "ACTIVE",
-        "REVOKED",
-        name="access_grant_status",
+        "ACTIVE", "REVOKED",
+        name="access_grant_status", _create_events=False,
     )
 
     bind = op.get_bind()
-    user_role.create(bind, checkfirst=True)
-    user_status.create(bind, checkfirst=True)
-    child_status.create(bind, checkfirst=True)
-    session_status.create(bind, checkfirst=True)
-    access_grant_level.create(bind, checkfirst=True)
-    access_grant_status.create(bind, checkfirst=True)
+    sa.Enum("ADMIN", "THERAPIST", "GUARDIAN", "VIEWER", name="user_role").create(bind, checkfirst=True)
+    sa.Enum("ACTIVE", "INACTIVE", name="user_status").create(bind, checkfirst=True)
+    sa.Enum("ACTIVE", "DELETED", name="child_status").create(bind, checkfirst=True)
+    sa.Enum(
+        "CREATED", "AUDIO_UPLOADING", "AUDIO_UPLOADED",
+        "ANALYSIS_REQUESTED", "ANALYSIS_PROCESSING", "ANALYSIS_COMPLETED",
+        "REPORT_READY", "FAILED", "DELETED",
+        name="session_status",
+    ).create(bind, checkfirst=True)
+    sa.Enum("VIEW_RESULT", "VIEW_AND_DOWNLOAD", name="access_grant_level").create(bind, checkfirst=True)
+    sa.Enum("ACTIVE", "REVOKED", name="access_grant_status").create(bind, checkfirst=True)
 
     op.create_table(
         "users",

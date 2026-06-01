@@ -15,6 +15,7 @@ from app.models.entities import AnalysisJob
 from app.repositories.analysis_job import AnalysisJobRepository
 from app.repositories.audio import AudioFileRepository
 from app.repositories.session import SessionRepository
+from app.repositories.template import TemplateRepository
 from app.schemas.analysis import (
     AnalysisJobCancelResponse,
     AnalysisJobCreateRequest,
@@ -33,6 +34,7 @@ class AnalysisJobService:
         self.analysis_repository = AnalysisJobRepository(db)
         self.audio_repository = AudioFileRepository(db)
         self.session_repository = SessionRepository(db)
+        self.template_repository = TemplateRepository(db)
         self.ai_client = AIClient()
 
     def create(self, request: AnalysisJobCreateRequest, current_user: UserRead) -> AnalysisJobRead:
@@ -62,6 +64,27 @@ class AnalysisJobService:
                 detail="An active analysis job already exists for this session.",
             )
 
+        template_content: str | None = None
+        if request.template_id is not None:
+            template = self.template_repository.get_by_id(request.template_id)
+            if template is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Template not found.",
+                )
+            is_accessible = (
+                template.is_system
+                or current_user.role == UserRole.ADMIN
+                or template.therapist_id == current_user.id
+            )
+            if not is_accessible:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You do not have access to this template.",
+                )
+            template_content = template.content
+            self.template_repository.increment_use_count(template)
+
         now = datetime.now(UTC)
         job = AnalysisJob(
             session_id=session.id,
@@ -90,7 +113,7 @@ class AnalysisJobService:
                 f"{settings.public_api_base_url.rstrip('/')}"
                 f"/api/v1/internal/analysis-jobs/{created_job.id}/progress"
             ),
-            "analysisTemplate": request.analysis_template,
+            "analysisTemplate": template_content,
         }
         dispatch_result = self.ai_client.dispatch_analysis_job(dispatch_payload)
         if dispatch_result is not None:

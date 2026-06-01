@@ -14,17 +14,16 @@ def upgrade() -> None:
     """Create the analysis_jobs table and its status enum."""
 
     analysis_job_status = sa.Enum(
-        "REQUESTED",
-        "QUEUED",
-        "PROCESSING",
-        "COMPLETED",
-        "FAILED",
-        "CANCELLED",
-        "EXPIRED",
-        name="analysis_job_status",
+        "REQUESTED", "QUEUED", "PROCESSING", "COMPLETED",
+        "FAILED", "CANCELLED", "EXPIRED",
+        name="analysis_job_status", _create_events=False,
     )
     bind = op.get_bind()
-    analysis_job_status.create(bind, checkfirst=True)
+    sa.Enum(
+        "REQUESTED", "QUEUED", "PROCESSING", "COMPLETED",
+        "FAILED", "CANCELLED", "EXPIRED",
+        name="analysis_job_status",
+    ).create(bind, checkfirst=True)
 
     op.create_table(
         "analysis_jobs",

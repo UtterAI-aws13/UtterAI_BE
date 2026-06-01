@@ -38,6 +38,31 @@ class S3Client:
             ExpiresIn=settings.presigned_url_expire_seconds,
         )
 
+    def upload_bytes(
+        self,
+        bucket: str,
+        key: str,
+        data: bytes,
+        content_type: str,
+    ) -> None:
+        """Upload raw bytes directly to S3 (used for template files)."""
+
+        self.client.put_object(
+            Bucket=bucket,
+            Key=key,
+            Body=data,
+            ContentType=content_type,
+        )
+
+    def generate_download_url(self, bucket: str, key: str, expires_in: int = 300) -> str:
+        """Return a presigned GET URL for downloading an S3 object."""
+
+        return self.client.generate_presigned_url(
+            "get_object",
+            Params={"Bucket": bucket, "Key": key},
+            ExpiresIn=expires_in,
+        )
+
     def object_exists(self, bucket: str, key: str) -> bool:
         """Check whether an uploaded object is present in S3.
 

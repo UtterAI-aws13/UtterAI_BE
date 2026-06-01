@@ -8,6 +8,8 @@ from app.core.db import get_db_session
 from app.schemas.auth import (
     LoginRequest,
     LogoutResponse,
+    PasswordChangeRequest,
+    ProfileUpdateRequest,
     RefreshRequest,
     SignupRequest,
     TokenResponse,
@@ -71,3 +73,27 @@ def logout(
 
     service = AuthService(db)
     return service.logout(current_user)
+
+
+@router.patch("/me", response_model=UserRead)
+def update_profile(
+    request: ProfileUpdateRequest,
+    current_user: UserRead = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> UserRead:
+    """Update the authenticated user's display name."""
+
+    service = AuthService(db)
+    return service.update_profile(request, current_user)
+
+
+@router.patch("/password", response_model=LogoutResponse)
+def change_password(
+    request: PasswordChangeRequest,
+    current_user: UserRead = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> LogoutResponse:
+    """Change the authenticated user's password and revoke all sessions."""
+
+    service = AuthService(db)
+    return service.change_password(request, current_user)
