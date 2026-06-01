@@ -155,3 +155,5 @@ claude_design_prompt.md
 *.egg-info/
 dist/
 build/
+
+**/.claude
