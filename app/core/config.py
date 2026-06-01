@@ -38,6 +38,7 @@ class Settings(BaseSettings):
 
     aws_region: str = "ap-northeast-2"
     raw_audio_bucket: str = "utterai-raw-audio"
+    template_bucket: str = "utterai-templates"
     presigned_url_expire_seconds: int = 900
 
     ai_service_base_url: str = ""

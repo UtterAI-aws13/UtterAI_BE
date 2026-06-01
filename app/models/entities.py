@@ -18,6 +18,8 @@ from app.core.enums import (
     SessionStatus,
     SoapNoteStatus,
     SpeakerRole,
+    TemplateCategory,
+    TemplateStatus,
     UserRole,
     UserStatus,
 )
@@ -405,6 +407,39 @@ class SoapNote(TimestampMixin, Base):
         nullable=False,
         default=SoapNoteStatus.DRAFT,
         server_default=SoapNoteStatus.DRAFT.value,
+    )
+
+
+class AnalysisTemplate(TimestampMixin, Base):
+    """Therapist-owned prompt template passed to the AI service during analysis."""
+
+    __tablename__ = "analysis_templates"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    therapist_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    category: Mapped[TemplateCategory] = mapped_column(
+        Enum(TemplateCategory, name="template_category"),
+        nullable=False,
+    )
+    content: Mapped[str | None] = mapped_column(Text, nullable=True)
+    file_s3_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+    file_original_name: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    is_system: Mapped[bool] = mapped_column(nullable=False, default=False, server_default="false")
+    use_count: Mapped[int] = mapped_column(nullable=False, default=0, server_default="0")
+    status: Mapped[TemplateStatus] = mapped_column(
+        Enum(TemplateStatus, name="template_status"),
+        nullable=False,
+        default=TemplateStatus.ACTIVE,
+        server_default=TemplateStatus.ACTIVE.value,
     )
 
 

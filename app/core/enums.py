@@ -97,3 +97,18 @@ class ReportStatus(StrEnum):
     READY = "READY"
     REGENERATING = "REGENERATING"
     DELETED = "DELETED"
+
+
+class TemplateCategory(StrEnum):
+    """Template category determines which workflow stage the template applies to."""
+
+    SESSION = "SESSION"
+    ASSESSMENT = "ASSESSMENT"
+    REPORT = "REPORT"
+
+
+class TemplateStatus(StrEnum):
+    """Template lifecycle states."""
+
+    ACTIVE = "ACTIVE"
+    DELETED = "DELETED"
