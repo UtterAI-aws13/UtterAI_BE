@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 
 from sqlalchemy import Date, DateTime, Enum, ForeignKey, String, Text, UniqueConstraint
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.enums import (
@@ -270,8 +270,8 @@ class AnalysisResult(TimestampMixin, Base):
         ForeignKey("sessions.id", ondelete="RESTRICT"),
         nullable=False,
     )
-    summary_json: Mapped[dict | None] = mapped_column(nullable=True)
-    metrics_json: Mapped[dict | None] = mapped_column(nullable=True)
+    summary_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    metrics_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     interpretation_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     transcript_s3_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     metrics_s3_key: Mapped[str | None] = mapped_column(Text, nullable=True)
