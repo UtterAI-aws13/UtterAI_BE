@@ -14,13 +14,11 @@ def upgrade() -> None:
     """Create the audio_files table and enum used by the audio domain."""
 
     audio_file_status = sa.Enum(
-        "PENDING",
-        "UPLOADED",
-        "DELETED",
-        name="audio_file_status",
+        "PENDING", "UPLOADED", "DELETED",
+        name="audio_file_status", _create_events=False,
     )
     bind = op.get_bind()
-    audio_file_status.create(bind, checkfirst=True)
+    sa.Enum("PENDING", "UPLOADED", "DELETED", name="audio_file_status").create(bind, checkfirst=True)
 
     op.create_table(
         "audio_files",

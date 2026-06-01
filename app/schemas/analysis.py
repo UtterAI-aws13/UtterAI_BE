@@ -13,7 +13,7 @@ class AnalysisJobCreateRequest(BaseModel):
 
     session_id: uuid.UUID
     audio_file_id: uuid.UUID
-    analysis_template: str | None = Field(default=None, max_length=255)
+    template_id: uuid.UUID | None = None
 
 
 class AnalysisJobRead(BaseModel):

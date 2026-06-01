@@ -25,3 +25,8 @@ Thumbs.db
 
 # Local design/planning docs not intended for the repository.
 claude_design_prompt.md
+
+# Python package build artifacts.
+*.egg-info/
+dist/
+build/
