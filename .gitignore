@@ -1,6 +1,7 @@
 # Python bytecode and cache directories do not belong in source control.
 __pycache__/
 *.py[cod]
+*.egg-info/
 
 # Virtual environment directories vary by developer machine.
 .venv/
