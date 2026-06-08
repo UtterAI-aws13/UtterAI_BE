@@ -24,9 +24,11 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     api_prefix: str = "/api/v1"
 
-    database_url: str = (
-        "postgresql+psycopg://utterai:utterai@localhost:5432/utterai"
-    )
+    db_user: str = "utterai"
+    db_password: str = "utterai"
+    db_host: str = "localhost"
+    db_port: int = 5432
+    db_name: str = "utterai"
 
     jwt_secret_key: str = "change-me"
     jwt_algorithm: str = "HS256"
