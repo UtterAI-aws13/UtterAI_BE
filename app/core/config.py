@@ -29,6 +29,13 @@ class Settings(BaseSettings):
     db_host: str = "localhost"
     db_port: int = 5432
     db_name: str = "utterai"
+    db_pool_size: int = 5
+    db_max_overflow: int = 10
+
+    redis_host: str = "localhost"
+    redis_port: int = 6379
+    redis_db: int = 0
+    redis_tls_enabled: bool = False
 
     jwt_secret_key: str = "change-me"
     jwt_algorithm: str = "HS256"

@@ -24,6 +24,8 @@ _db_url = URL.create(
 engine = create_engine(
     _db_url,
     pool_pre_ping=True,
+    pool_size=settings.db_pool_size,
+    max_overflow=settings.db_max_overflow,
 )
 
 # `autoflush=False` keeps writes explicit, which is safer while the service is
