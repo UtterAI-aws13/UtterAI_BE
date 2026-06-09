@@ -13,15 +13,15 @@ from app.core.config import get_settings
 from app.core.enums import AnalysisJobStatus, AudioFileStatus, SessionStatus, UserRole
 from app.infrastructure.ai_client.client import AIClient
 from app.models.entities import AnalysisJob
-from app.repositories.analysis_job import AnalysisJobRepository
-from app.repositories.audio import AudioFileRepository
-from app.repositories.session import SessionRepository
-from app.repositories.template import TemplateRepository
 from app.observability.metrics import (
     record_analysis_job_created,
     record_analysis_job_dispatch_failed,
     record_analysis_job_dispatched,
 )
+from app.repositories.analysis_job import AnalysisJobRepository
+from app.repositories.audio import AudioFileRepository
+from app.repositories.session import SessionRepository
+from app.repositories.template import TemplateRepository
 from app.schemas.analysis import (
     AnalysisJobCancelResponse,
     AnalysisJobCreateRequest,
@@ -54,12 +54,6 @@ class AnalysisJobService:
         self.ai_client = AIClient()
 
     def create(self, request: AnalysisJobCreateRequest, current_user: UserRead) -> AnalysisJobRead:
-        """Create a new analysis job for an uploaded audio file.
-
-        Only uploaded audio can be analyzed. The service also enforces that one
-        session cannot have multiple active analysis jobs at the same time.
-        """
-
         tracer = trace.get_tracer(__name__)
         with tracer.start_as_current_span("analysis_job.create") as span:
             session = self._get_accessible_session(request.session_id, current_user)
@@ -85,7 +79,6 @@ class AnalysisJobService:
                     detail="An active analysis job already exists for this session.",
                 )
 
-            template_content: str | None = None
             if request.template_id is not None:
                 template = self.template_repository.get_by_id(request.template_id)
                 if template is None:
@@ -96,24 +89,21 @@ class AnalysisJobService:
                 is_accessible = (
                     template.is_system
                     or current_user.role == UserRole.ADMIN
-                    or template.therapist_id == current_user.id
+                    or template.owner_id == current_user.id
                 )
                 if not is_accessible:
                     raise HTTPException(
                         status_code=status.HTTP_403_FORBIDDEN,
                         detail="You do not have access to this template.",
                     )
-                template_content = template.content
                 self.template_repository.increment_use_count(template)
 
             now = datetime.now(UTC)
             job = AnalysisJob(
                 session_id=session.id,
-                audio_id=audio_file.id,
-                status=AnalysisJobStatus.REQUESTED,
-                progress=0,
-                current_stage="Analysis requested",
-                requested_at=now,
+                audio_file_id=audio_file.id,
+                status=AnalysisJobStatus.PENDING,
+                created_at=now,
             )
             created_job = self.analysis_repository.create(job)
             record_analysis_job_created()
@@ -124,33 +114,25 @@ class AnalysisJobService:
             dispatch_payload = {
                 "jobId": str(created_job.id),
                 "sessionId": str(created_job.session_id),
-                "audioId": str(created_job.audio_id),
-                "audioS3Bucket": audio_file.s3_bucket,
-                "audioS3Key": audio_file.s3_key,
-                "callbackUrl": (
-                    f"{settings.public_api_base_url.rstrip('/')}"
-                    "/api/v1/internal/analysis-results/callback"
-                ),
+                "audioFileId": str(created_job.audio_file_id),
+                "audioObjectKey": audio_file.object_key,
                 "progressCallbackUrl": (
                     f"{settings.public_api_base_url.rstrip('/')}"
                     f"/api/v1/internal/analysis-jobs/{created_job.id}/progress"
                 ),
-                "analysisTemplate": template_content,
             }
+            if request.template_id is not None:
+                dispatch_payload["templateId"] = str(request.template_id)
+
             try:
                 dispatch_result = self.ai_client.dispatch_analysis_job(dispatch_payload)
             except Exception:
                 record_analysis_job_dispatch_failed()
                 raise
+
             if dispatch_result is not None:
                 record_analysis_job_dispatched()
-                created_job.external_ai_job_id = dispatch_result.get("externalAiJobId")
-                created_job.status = AnalysisJobStatus.QUEUED
-                created_job.current_stage = dispatch_result.get(
-                    "currentStage",
-                    "Queued in AI service",
-                )
-                created_job.progress = int(dispatch_result.get("progress", 0))
+                created_job.status = AnalysisJobStatus.DOWNLOADING
                 created_job = self.analysis_repository.update(created_job)
                 session.status = SessionStatus.ANALYSIS_PROCESSING
                 self.session_repository.update(session)
@@ -236,9 +218,8 @@ class AnalysisJobService:
         return AnalysisJobRead.model_validate(updated_job)
 
     def _get_accessible_session(self, session_id: uuid.UUID, current_user: UserRead):
-        from app.core.enums import SessionStatus as SS
         session = self.session_repository.get_by_id(session_id)
-        if session is None or session.status == SS.DELETED:
+        if session is None or session.status == SessionStatus.DELETED:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Session not found.",
