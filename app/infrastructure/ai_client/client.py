@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 import httpx
+from opentelemetry import trace
 
 from app.core.config import get_settings
 
@@ -30,11 +31,17 @@ class AIClient:
             return None
 
         url = f"{settings.ai_service_base_url.rstrip('/')}{settings.ai_service_analysis_path}"
-        response = httpx.post(
-            url,
-            json=payload,
-            headers={"X-Internal-Token": settings.internal_callback_token},
-            timeout=30.0,
-        )
-        response.raise_for_status()
-        return response.json() if response.content else {}
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("ai_client.dispatch_analysis_job") as span:
+            span.set_attribute("http.request.method", "POST")
+            span.set_attribute("http.request.url", url)
+            span.set_attribute("ai.service.base_url", settings.ai_service_base_url)
+            response = httpx.post(
+                url,
+                json=payload,
+                headers={"X-Internal-Token": settings.internal_callback_token},
+                timeout=30.0,
+            )
+            span.set_attribute("http.response.status_code", response.status_code)
+            response.raise_for_status()
+            return response.json() if response.content else {}

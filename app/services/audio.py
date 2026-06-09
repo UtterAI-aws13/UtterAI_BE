@@ -6,6 +6,7 @@ import os
 import uuid
 
 from fastapi import HTTPException, status
+from opentelemetry import trace
 from sqlalchemy.orm import Session as DbSession
 
 from app.core.config import get_settings
@@ -15,6 +16,7 @@ from app.models.entities import AudioFile, Child, Session
 from app.repositories.audio import AudioFileRepository
 from app.repositories.child import ChildRepository
 from app.repositories.session import SessionRepository
+from app.observability.metrics import record_audio_upload_completed
 from app.schemas.audio import (
     AudioFileCompleteRequest,
     AudioFileRead,
@@ -47,41 +49,45 @@ class AudioService:
         lifecycle idempotently after S3 upload finishes.
         """
 
-        session = self._get_accessible_session(request.session_id, current_user)
-        object_key = self._build_audio_object_key(
-            therapist_id=session.therapist_id,
-            child_id=session.child_id,
-            session_id=session.id,
-            file_name=request.file_name,
-        )
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("audio_upload.create_presigned") as span:
+            session = self._get_accessible_session(request.session_id, current_user)
+            object_key = self._build_audio_object_key(
+                therapist_id=session.therapist_id,
+                child_id=session.child_id,
+                session_id=session.id,
+                file_name=request.file_name,
+            )
+            span.set_attribute("session.id", str(session.id))
+            span.set_attribute("audio.object_key", object_key)
 
-        audio_file = AudioFile(
-            session_id=session.id,
-            original_file_name=request.file_name,
-            content_type=request.content_type,
-            file_size=request.file_size,
-            s3_bucket=settings.raw_audio_bucket,
-            s3_key=object_key,
-            status=AudioFileStatus.PENDING,
-        )
-        created_audio = self.audio_repository.create(audio_file)
+            audio_file = AudioFile(
+                session_id=session.id,
+                original_file_name=request.file_name,
+                content_type=request.content_type,
+                file_size=request.file_size,
+                s3_bucket=settings.raw_audio_bucket,
+                s3_key=object_key,
+                status=AudioFileStatus.PENDING,
+            )
+            created_audio = self.audio_repository.create(audio_file)
 
-        if session.status == SessionStatus.CREATED:
-            session.status = SessionStatus.AUDIO_UPLOADING
-            self.session_repository.update(session)
+            if session.status == SessionStatus.CREATED:
+                session.status = SessionStatus.AUDIO_UPLOADING
+                self.session_repository.update(session)
 
-        upload_url = self.s3_client.generate_upload_url(
-            bucket=created_audio.s3_bucket,
-            key=created_audio.s3_key,
-            content_type=request.content_type,
-        )
-        return PresignedUploadResponse(
-            audio_file_id=created_audio.id,
-            upload_url=upload_url,
-            s3_bucket=created_audio.s3_bucket,
-            s3_key=created_audio.s3_key,
-            expires_in=settings.presigned_url_expire_seconds,
-        )
+            upload_url = self.s3_client.generate_upload_url(
+                bucket=created_audio.s3_bucket,
+                key=created_audio.s3_key,
+                content_type=request.content_type,
+            )
+            return PresignedUploadResponse(
+                audio_file_id=created_audio.id,
+                upload_url=upload_url,
+                s3_bucket=created_audio.s3_bucket,
+                s3_key=created_audio.s3_key,
+                expires_in=settings.presigned_url_expire_seconds,
+            )
 
     def complete_upload(
         self,
@@ -95,34 +101,40 @@ class AudioService:
         final metadata instead of creating duplicate rows or invalid transitions.
         """
 
-        session = self._get_accessible_session(request.session_id, current_user)
-        audio_file = self.audio_repository.get_by_s3_key(request.s3_key)
-        if audio_file is None or audio_file.session_id != session.id:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Pending audio file not found for this session.",
-            )
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("audio_upload.complete") as span:
+            session = self._get_accessible_session(request.session_id, current_user)
+            audio_file = self.audio_repository.get_by_s3_key(request.s3_key)
+            if audio_file is None or audio_file.session_id != session.id:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Pending audio file not found for this session.",
+                )
 
-        if audio_file.status == AudioFileStatus.DELETED:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Deleted audio files cannot be completed.",
-            )
+            if audio_file.status == AudioFileStatus.DELETED:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Deleted audio files cannot be completed.",
+                )
 
-        if not self.s3_client.object_exists(audio_file.s3_bucket, audio_file.s3_key):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Uploaded object not found in S3.",
-            )
+            if not self.s3_client.object_exists(audio_file.s3_bucket, audio_file.s3_key):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Uploaded object not found in S3.",
+                )
 
-        audio_file.duration_seconds = request.duration_seconds
-        audio_file.status = AudioFileStatus.UPLOADED
-        updated_audio = self.audio_repository.update(audio_file)
+            audio_file.duration_seconds = request.duration_seconds
+            audio_file.status = AudioFileStatus.UPLOADED
+            updated_audio = self.audio_repository.update(audio_file)
 
-        session.status = SessionStatus.AUDIO_UPLOADED
-        self.session_repository.update(session)
+            session.status = SessionStatus.AUDIO_UPLOADED
+            self.session_repository.update(session)
+            record_audio_upload_completed()
 
-        return AudioFileRead.model_validate(updated_audio)
+            span.set_attribute("audio.file.id", str(updated_audio.id))
+            span.set_attribute("audio.duration_seconds", request.duration_seconds)
+
+            return AudioFileRead.model_validate(updated_audio)
 
     def get_audio_file(self, audio_file_id: uuid.UUID, current_user: UserRead) -> AudioFileRead:
         """Return one accessible audio metadata row."""
