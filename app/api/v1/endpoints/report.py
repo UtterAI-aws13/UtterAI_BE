@@ -1,44 +1,37 @@
-"""HTTP endpoints for report generation, listing, reads, and download."""
+"""Report read, segment edit, and approval endpoints."""
 
 from __future__ import annotations
 
 import uuid
 
 from fastapi import APIRouter, Depends, Query
-from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
 from app.core.db import get_db_session
 from app.schemas.auth import UserRead
-from app.schemas.report import ReportCreateRequest, ReportRead, ReportUpdateRequest
+from app.schemas.report import (
+    ApprovalCreateRequest,
+    ApprovalHistoryRead,
+    ReportRead,
+    ReportSegmentRead,
+    ReportSegmentUpdateRequest,
+    ReportStatusUpdateRequest,
+)
 from app.services.report import ReportService
 
 router = APIRouter()
 
 
-@router.post("", response_model=ReportRead, status_code=201)
-def generate_report(
-    request: ReportCreateRequest,
-    current_user: UserRead = Depends(get_current_user),
-    db: Session = Depends(get_db_session),
-) -> ReportRead:
-    """Generate a report from a finalized SOAP note and analysis result."""
-
-    service = ReportService(db)
-    return service.generate(request, current_user)
-
-
 @router.get("", response_model=list[ReportRead])
 def list_reports(
-    child_id: uuid.UUID | None = Query(default=None, alias="childId"),
+    session_id: uuid.UUID | None = Query(default=None),
+    patient_ref_id: uuid.UUID | None = Query(default=None),
     current_user: UserRead = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ) -> list[ReportRead]:
-    """List reports visible to the current user."""
-
     service = ReportService(db)
-    return service.list(current_user, child_id)
+    return service.list(current_user, session_id, patient_ref_id)
 
 
 @router.get("/{report_id}", response_model=ReportRead)
@@ -47,37 +40,59 @@ def get_report(
     current_user: UserRead = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ) -> ReportRead:
-    """Return one report after access checks."""
-
     service = ReportService(db)
     return service.get(report_id, current_user)
 
 
-@router.patch("/{report_id}", response_model=ReportRead)
-def update_report(
+@router.get("/{report_id}/segments", response_model=list[ReportSegmentRead])
+def list_report_segments(
     report_id: uuid.UUID,
-    request: ReportUpdateRequest,
+    current_user: UserRead = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> list[ReportSegmentRead]:
+    service = ReportService(db)
+    return service.get_segments(report_id, current_user)
+
+
+@router.patch("/{report_id}/segments/{segment_id}", response_model=ReportSegmentRead)
+def update_report_segment(
+    report_id: uuid.UUID,
+    segment_id: uuid.UUID,
+    request: ReportSegmentUpdateRequest,
+    current_user: UserRead = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> ReportSegmentRead:
+    service = ReportService(db)
+    return service.update_segment(report_id, segment_id, request, current_user)
+
+
+@router.patch("/{report_id}/status", response_model=ReportRead)
+def update_report_status(
+    report_id: uuid.UUID,
+    request: ReportStatusUpdateRequest,
     current_user: UserRead = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ) -> ReportRead:
-    """Apply manual edits to an accessible report."""
-
     service = ReportService(db)
-    return service.update(report_id, request, current_user)
+    return service.update_status(report_id, request, current_user)
 
 
-@router.get("/{report_id}/download")
-def download_report(
+@router.post("/{report_id}/approvals", response_model=ApprovalHistoryRead, status_code=201)
+def create_approval(
+    report_id: uuid.UUID,
+    request: ApprovalCreateRequest,
+    current_user: UserRead = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> ApprovalHistoryRead:
+    service = ReportService(db)
+    return service.create_approval(report_id, request, current_user)
+
+
+@router.get("/{report_id}/approvals", response_model=list[ApprovalHistoryRead])
+def list_approvals(
     report_id: uuid.UUID,
     current_user: UserRead = Depends(get_current_user),
     db: Session = Depends(get_db_session),
-) -> PlainTextResponse:
-    """Return the report as a downloadable text attachment for the MVP."""
-
+) -> list[ApprovalHistoryRead]:
     service = ReportService(db)
-    filename, content = service.get_download_payload(report_id, current_user)
-    return PlainTextResponse(
-        content,
-        media_type="text/plain; charset=utf-8",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
+    return service.list_approvals(report_id, current_user)

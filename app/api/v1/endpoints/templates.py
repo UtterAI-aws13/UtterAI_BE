@@ -1,4 +1,4 @@
-"""Analysis template CRUD and file upload endpoints."""
+"""Template CRUD and file upload endpoints."""
 
 import uuid
 
@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
 from app.core.db import get_db_session
-from app.core.enums import TemplateCategory
+from app.core.enums import TemplateType
 from app.schemas.auth import UserRead
 from app.schemas.template import (
     TemplateCreateRequest,
@@ -26,8 +26,6 @@ def create_template(
     current_user: UserRead = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ) -> TemplateRead:
-    """Create a new text-content template owned by the current therapist."""
-
     service = TemplateService(db)
     return service.create(request, current_user)
 
@@ -36,14 +34,12 @@ def create_template(
 def upload_template(
     file: UploadFile = File(..., description="PDF, DOCX, or TXT file"),
     name: str | None = Form(default=None),
-    category: str = Form(...),
+    template_type: str = Form(default="SOAP_NOTE"),
     current_user: UserRead = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ) -> TemplateRead:
-    """Upload a PDF/DOCX/TXT file as a template. Text is extracted automatically."""
-
     service = TemplateService(db)
-    return service.upload_file(file, name, TemplateCategory(category), current_user)
+    return service.upload_file(file, name, TemplateType(template_type), current_user)
 
 
 @router.get("", response_model=list[TemplateRead])
@@ -51,8 +47,6 @@ def list_templates(
     current_user: UserRead = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ) -> list[TemplateRead]:
-    """List templates visible to the authenticated user (own + system templates)."""
-
     service = TemplateService(db)
     return service.list(current_user)
 
@@ -63,8 +57,6 @@ def get_template_file(
     current_user: UserRead = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ) -> TemplateFileUrlResponse:
-    """Return a presigned GET URL to download the uploaded template file."""
-
     service = TemplateService(db)
     return service.get_file_url(template_id, current_user)
 
@@ -75,8 +67,6 @@ def get_template(
     current_user: UserRead = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ) -> TemplateRead:
-    """Return one template after access checks."""
-
     service = TemplateService(db)
     return service.get(template_id, current_user)
 
@@ -88,8 +78,6 @@ def update_template(
     current_user: UserRead = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ) -> TemplateRead:
-    """Update template name, category, or content (system templates are immutable)."""
-
     service = TemplateService(db)
     return service.update(template_id, request, current_user)
 
@@ -100,7 +88,5 @@ def delete_template(
     current_user: UserRead = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ) -> TemplateRead:
-    """Soft-delete a template (system templates cannot be deleted)."""
-
     service = TemplateService(db)
     return service.delete(template_id, current_user)

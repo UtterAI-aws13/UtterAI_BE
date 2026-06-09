@@ -1,4 +1,4 @@
-"""Transcript and analysis result callback endpoints."""
+"""Transcript read, segment edit, finalize, and internal callback endpoints."""
 
 import uuid
 
@@ -9,10 +9,9 @@ from app.api.dependencies import get_current_user, verify_internal_token
 from app.core.db import get_db_session
 from app.schemas.auth import UserRead
 from app.schemas.transcript import (
-    AnalysisResultCallbackRequest,
+    InternalTranscriptCallbackRequest,
     TranscriptBulkUpdateRequest,
-    TranscriptConfirmResponse,
-    TranscriptSegmentCreateRequest,
+    TranscriptFinalizeResponse,
     TranscriptRead,
     TranscriptSegmentRead,
     TranscriptSegmentUpdateRequest,
@@ -23,90 +22,65 @@ router = APIRouter()
 internal_result_router = APIRouter()
 
 
-@router.get("/{result_id}", response_model=TranscriptRead)
-def get_transcript_by_result(
-    result_id: uuid.UUID,
+@router.get("/{transcript_id}", response_model=TranscriptRead)
+def get_transcript(
+    transcript_id: uuid.UUID,
     current_user: UserRead = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ) -> TranscriptRead:
-    """Return transcript data using the analysis result identifier."""
-
     service = TranscriptService(db)
-    return service.get_transcript_by_result(result_id, current_user)
+    return service.get_by_id(transcript_id, current_user)
 
 
-@router.patch("/{result_id}/segments/{segment_id}", response_model=TranscriptSegmentRead)
+@router.get("/{transcript_id}/segments", response_model=list[TranscriptSegmentRead])
+def list_transcript_segments(
+    transcript_id: uuid.UUID,
+    current_user: UserRead = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> list[TranscriptSegmentRead]:
+    service = TranscriptService(db)
+    return service.list_segments(transcript_id, current_user)
+
+
+@router.patch("/{transcript_id}/segments/{segment_id}", response_model=TranscriptSegmentRead)
 def update_transcript_segment(
-    result_id: uuid.UUID,
+    transcript_id: uuid.UUID,
     segment_id: uuid.UUID,
     request: TranscriptSegmentUpdateRequest,
     current_user: UserRead = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ) -> TranscriptSegmentRead:
-    """Update one transcript segment and preserve edit history."""
-
     service = TranscriptService(db)
-    return service.update_segment(segment_id, request, current_user)
+    return service.update_segment(transcript_id, segment_id, request, current_user)
 
 
-@router.post("/{result_id}/segments", response_model=TranscriptSegmentRead, status_code=201)
-def add_transcript_segment(
-    result_id: uuid.UUID,
-    request: TranscriptSegmentCreateRequest,
-    current_user: UserRead = Depends(get_current_user),
-    db: Session = Depends(get_db_session),
-) -> TranscriptSegmentRead:
-    """Add a missing transcript segment manually."""
-
-    service = TranscriptService(db)
-    return service.add_segment(result_id, request, current_user)
-
-
-@router.patch("/{result_id}/segments", response_model=TranscriptRead)
+@router.patch("/{transcript_id}/segments", response_model=list[TranscriptSegmentRead])
 def bulk_update_transcript_segments(
-    result_id: uuid.UUID,
+    transcript_id: uuid.UUID,
     request: TranscriptBulkUpdateRequest,
     current_user: UserRead = Depends(get_current_user),
     db: Session = Depends(get_db_session),
-) -> TranscriptRead:
-    """Update multiple transcript segments in one request."""
-
+) -> list[TranscriptSegmentRead]:
     service = TranscriptService(db)
-    return service.bulk_update_segments(request, current_user)
+    return service.bulk_update_segments(transcript_id, request, current_user)
 
 
-@router.patch("/{result_id}/confirm", response_model=TranscriptConfirmResponse)
-def confirm_transcript(
-    result_id: uuid.UUID,
+@router.post("/{transcript_id}/finalize", response_model=TranscriptFinalizeResponse)
+def finalize_transcript(
+    transcript_id: uuid.UUID,
     current_user: UserRead = Depends(get_current_user),
     db: Session = Depends(get_db_session),
-) -> TranscriptConfirmResponse:
-    """Mark transcript segments as confirmed for downstream note generation."""
-
+) -> TranscriptFinalizeResponse:
     service = TranscriptService(db)
-    return service.confirm_transcript(result_id, current_user)
-
-
-@router.delete("/{result_id}/segments/{segment_id}", response_model=TranscriptRead)
-def delete_transcript_segment(
-    result_id: uuid.UUID,
-    segment_id: uuid.UUID,
-    current_user: UserRead = Depends(get_current_user),
-    db: Session = Depends(get_db_session),
-) -> TranscriptRead:
-    """Delete a transcript segment from an accessible transcript."""
-
-    service = TranscriptService(db)
-    return service.delete_segment(segment_id, current_user)
+    return service.finalize(transcript_id, current_user)
 
 
 @internal_result_router.post("/callback", response_model=TranscriptRead)
 def handle_analysis_result_callback(
-    request: AnalysisResultCallbackRequest,
+    request: InternalTranscriptCallbackRequest,
     _: str = Depends(verify_internal_token),
     db: Session = Depends(get_db_session),
 ) -> TranscriptRead:
-    """Persist transcript/result data delivered by the AI service."""
-
+    """Persist transcript data delivered by the AI worker (dev/test tooling)."""
     service = TranscriptService(db)
-    return service.handle_result_callback(request)
+    return service.handle_internal_callback(request)

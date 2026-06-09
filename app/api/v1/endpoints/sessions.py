@@ -22,22 +22,18 @@ def create_session(
     current_user: UserRead = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ) -> SessionRead:
-    """Create a session linked to an accessible child profile."""
-
     service = SessionService(db)
     return service.create(request, current_user)
 
 
 @router.get("", response_model=list[SessionRead])
 def list_sessions(
-    child_id: uuid.UUID | None = Query(default=None),
+    patient_ref_id: uuid.UUID | None = Query(default=None),
     current_user: UserRead = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ) -> list[SessionRead]:
-    """List sessions visible to the authenticated user."""
-
     service = SessionService(db)
-    return service.list(current_user, child_id)
+    return service.list(current_user, patient_ref_id)
 
 
 @router.get("/{session_id}", response_model=SessionRead)
@@ -46,8 +42,6 @@ def get_session(
     current_user: UserRead = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ) -> SessionRead:
-    """Return a single session after ownership checks."""
-
     service = SessionService(db)
     return service.get(session_id, current_user)
 
@@ -58,8 +52,6 @@ def list_session_reports(
     current_user: UserRead = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ) -> list[ReportRead]:
-    """List reports associated with one accessible session."""
-
     service = ReportService(db)
     return service.list(current_user, session_id=session_id)
 
@@ -71,8 +63,6 @@ def update_session(
     current_user: UserRead = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ) -> SessionRead:
-    """Update editable session fields."""
-
     service = SessionService(db)
     return service.update(session_id, request, current_user)
 
@@ -83,7 +73,5 @@ def delete_session(
     current_user: UserRead = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ) -> SessionRead:
-    """Soft-delete a session by setting its status to `DELETED`."""
-
     service = SessionService(db)
     return service.delete(session_id, current_user)
