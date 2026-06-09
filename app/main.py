@@ -5,15 +5,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.api.router import api_router
 from app.core.config import get_settings
-from app.core.db import get_db_session
+from app.observability.otel import initialize_observability, instrument_fastapi_app
 
 
 def create_application() -> FastAPI:
     """Create the FastAPI application with shared configuration and routers."""
 
     settings = get_settings()
+    initialize_observability()
+
+    from app.api.router import api_router
+    from app.core.db import get_db_session
+
     app = FastAPI(
         title=settings.app_name,
         version=settings.app_version,
@@ -30,6 +34,7 @@ def create_application() -> FastAPI:
     )
 
     app.include_router(api_router, prefix=settings.api_prefix)
+    instrument_fastapi_app(app)
 
     @app.get("/health", tags=["health"])
     def health_check() -> dict[str, str]:

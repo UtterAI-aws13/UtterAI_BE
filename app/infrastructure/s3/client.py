@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from botocore.exceptions import ClientError
 import boto3
+from opentelemetry import trace
 
 from app.core.config import get_settings
 
@@ -28,15 +29,20 @@ class S3Client:
     ) -> str:
         """Return a presigned PUT URL for direct browser upload to S3."""
 
-        return self.client.generate_presigned_url(
-            "put_object",
-            Params={
-                "Bucket": bucket,
-                "Key": key,
-                "ContentType": content_type,
-            },
-            ExpiresIn=settings.presigned_url_expire_seconds,
-        )
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("s3.generate_upload_url") as span:
+            span.set_attribute("aws.s3.bucket", bucket)
+            span.set_attribute("aws.s3.key", key)
+            span.set_attribute("http.request.method", "PUT")
+            return self.client.generate_presigned_url(
+                "put_object",
+                Params={
+                    "Bucket": bucket,
+                    "Key": key,
+                    "ContentType": content_type,
+                },
+                ExpiresIn=settings.presigned_url_expire_seconds,
+            )
 
     def upload_bytes(
         self,
@@ -47,21 +53,29 @@ class S3Client:
     ) -> None:
         """Upload raw bytes directly to S3 (used for template files)."""
 
-        self.client.put_object(
-            Bucket=bucket,
-            Key=key,
-            Body=data,
-            ContentType=content_type,
-        )
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("s3.upload_bytes") as span:
+            span.set_attribute("aws.s3.bucket", bucket)
+            span.set_attribute("aws.s3.key", key)
+            self.client.put_object(
+                Bucket=bucket,
+                Key=key,
+                Body=data,
+                ContentType=content_type,
+            )
 
     def generate_download_url(self, bucket: str, key: str, expires_in: int = 300) -> str:
         """Return a presigned GET URL for downloading an S3 object."""
 
-        return self.client.generate_presigned_url(
-            "get_object",
-            Params={"Bucket": bucket, "Key": key},
-            ExpiresIn=expires_in,
-        )
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("s3.generate_download_url") as span:
+            span.set_attribute("aws.s3.bucket", bucket)
+            span.set_attribute("aws.s3.key", key)
+            return self.client.generate_presigned_url(
+                "get_object",
+                Params={"Bucket": bucket, "Key": key},
+                ExpiresIn=expires_in,
+            )
 
     def object_exists(self, bucket: str, key: str) -> bool:
         """Check whether an uploaded object is present in S3.
@@ -70,11 +84,18 @@ class S3Client:
         metadata row as uploaded, so session state does not advance on bad input.
         """
 
-        try:
-            self.client.head_object(Bucket=bucket, Key=key)
-            return True
-        except ClientError as exc:
-            error_code = exc.response.get("Error", {}).get("Code")
-            if error_code in {"404", "NoSuchKey", "NotFound"}:
-                return False
-            raise
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("s3.object_exists") as span:
+            span.set_attribute("aws.s3.bucket", bucket)
+            span.set_attribute("aws.s3.key", key)
+            try:
+                self.client.head_object(Bucket=bucket, Key=key)
+                span.set_attribute("aws.s3.object_exists", True)
+                return True
+            except ClientError as exc:
+                error_code = exc.response.get("Error", {}).get("Code")
+                span.set_attribute("aws.s3.error_code", str(error_code))
+                if error_code in {"404", "NoSuchKey", "NotFound"}:
+                    span.set_attribute("aws.s3.object_exists", False)
+                    return False
+                raise

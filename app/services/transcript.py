@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 import uuid
 
 from fastapi import HTTPException, status
+from opentelemetry import trace
 from sqlalchemy.orm import Session as DbSession
 
 from app.core.enums import AnalysisJobStatus, SessionStatus, TranscriptStatus, UserRole
@@ -13,6 +14,7 @@ from app.models.entities import Transcript, TranscriptSegment
 from app.repositories.analysis_job import AnalysisJobRepository
 from app.repositories.session import SessionRepository
 from app.repositories.transcript import TranscriptRepository
+from app.observability.metrics import record_analysis_job_callback_received
 from app.schemas.auth import UserRead
 from app.schemas.transcript import (
     InternalTranscriptCallbackRequest,
@@ -29,6 +31,94 @@ class TranscriptService:
         self.transcript_repository = TranscriptRepository(db)
         self.analysis_job_repository = AnalysisJobRepository(db)
         self.session_repository = SessionRepository(db)
+# db 마이그레이션 하면서 빠진 
+#     def handle_result_callback(self, request: AnalysisResultCallbackRequest) -> TranscriptRead:
+#         """Persist completed analysis results and transcript rows from AI callback.
+
+#         The callback is treated as the first source of transcript truth. It
+#         stores summary/metrics plus speaker and utterance rows so later therapist
+#         review can happen entirely through backend-managed data.
+#         """
+
+#         tracer = trace.get_tracer(__name__)
+#         with tracer.start_as_current_span("analysis_result.handle_callback") as span:
+#             record_analysis_job_callback_received()
+
+#             job = self.analysis_job_repository.get_by_id(request.job_id)
+#             if job is None:
+#                 raise HTTPException(
+#                     status_code=status.HTTP_404_NOT_FOUND,
+#                     detail="Analysis job not found.",
+#                 )
+#             span.set_attribute("analysis.job.id", str(job.id))
+#             if request.status != AnalysisJobStatus.COMPLETED:
+#                 raise HTTPException(
+#                     status_code=status.HTTP_400_BAD_REQUEST,
+#                     detail="Only completed analysis callbacks are supported in this flow.",
+#                 )
+
+#             result = AnalysisResult(
+#                 job_id=job.id,
+#                 session_id=job.session_id,
+#                 summary_json=request.summary,
+#                 metrics_json=request.metrics,
+#                 interpretation_text=request.interpretation_text,
+#                 transcript_s3_key=request.transcript_s3_key,
+#                 metrics_s3_key=request.metrics_s3_key,
+#                 raw_result_s3_key=request.raw_result_s3_key,
+#                 report_s3_key=request.report_s3_key,
+#             )
+#             stored_result = self.analysis_result_repository.create_result(result)
+
+#             speakers = [
+#                 Speaker(
+#                     session_id=job.session_id,
+#                     speaker_label=item.label,
+#                     speaker_role=item.role,
+#                 )
+#                 for item in request.speakers
+#             ]
+#             utterances = [
+#                 Utterance(
+#                     session_id=job.session_id,
+#                     speaker_label=item.speaker_label,
+#                     # speaker_id is linked after speaker rows are flushed in the repository.
+#                     speaker_id=None,
+#                     start_time=item.start_time,
+#                     end_time=item.end_time,
+#                     original_text=item.text,
+#                     edited_text=None,
+#                     confidence=item.confidence,
+#                     is_confirmed=False,
+#                 )
+#                 for item in request.utterances
+#             ]
+
+#             # Speaker primary keys are assigned after flush during repository replace.
+#             self.analysis_result_repository.replace_speakers_and_utterances(
+#                 session_id=job.session_id,
+#                 speakers=speakers,
+#                 utterances=utterances,
+#             )
+
+#             job.status = AnalysisJobStatus.COMPLETED
+#             job.progress = 100
+#             job.current_stage = "Analysis completed"
+#             if job.started_at is None:
+#                 job.started_at = datetime.now(UTC)
+#             job.completed_at = datetime.now(UTC)
+#             self.analysis_job_repository.update(job)
+
+#             session = self.session_repository.get_by_id(job.session_id)
+#             if session is not None:
+#                 session.status = SessionStatus.ANALYSIS_COMPLETED
+#                 self.session_repository.update(session)
+
+#             span.set_attribute("analysis.result.id", str(stored_result.id))
+#             span.set_attribute("analysis.speakers.count", len(speakers))
+#             span.set_attribute("analysis.utterances.count", len(utterances))
+
+#             return self.get_transcript_by_session(job.session_id, current_user=None, allow_internal=True)
 
     def get_by_session(
         self,
