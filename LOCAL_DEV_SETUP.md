@@ -7,38 +7,42 @@
 - Python `3.11+`
 - Docker Desktop
 - Git
-- PowerShell
 
 ## 2. First-Time Setup
 
 1. 예시 환경 파일 복사
 
-```powershell
+```bash
+# macOS / Linux
+cp .env.example .env
+
+# Windows (PowerShell)
 Copy-Item .env.example .env
 ```
 
 2. Python 의존성 설치
 
-```powershell
-python -m pip install -e .[dev]
+```bash
+python -m pip install -e ".[dev]"
 ```
 
 3. 로컬 PostgreSQL 실행
 
-```powershell
+```bash
 docker compose -f docker-compose.local.yml up -d
 ```
 
 4. DB 마이그레이션 적용
 
-```powershell
+```bash
 alembic upgrade head
 ```
 
 5. API 서버 실행
 
-```powershell
+```bash
 uvicorn app.main:app --reload
+# Swagger: http://localhost:8000/docs
 ```
 
 ## 3. Recommended Verification Order
