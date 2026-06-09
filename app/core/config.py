@@ -54,6 +54,14 @@ class Settings(BaseSettings):
     ai_service_analysis_path: str = "/internal/ai/analysis-jobs"
     public_api_base_url: str = "http://localhost:8000"
 
+    otel_service_name: str = "backend"
+    otel_exporter_otlp_endpoint: str = "http://localhost:4318"
+    otel_exporter_otlp_protocol: str = "http/protobuf"
+    otel_metrics_exporter: str = "otlp"
+    otel_traces_exporter: str = "otlp"
+    otel_logs_exporter: str = "none"
+    otel_resource_attributes: str = "deployment.environment=local,team=utterai"
+
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
 
 
