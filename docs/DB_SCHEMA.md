@@ -2,7 +2,7 @@
 
 > **기준**: `entities.py` 기반 (`app/models/entities.py`)  
 > **DB**: PostgreSQL (RDS) — BE 전용 (AI DB는 별도 `rag_chunks` 테이블)  
-> **마지막 마이그레이션**: `20260610_0013_remove_approval_history`
+> **마지막 마이그레이션**: `ee74ebb16930_add_created_by_slp_id_and_current_slp_id_to_patient_refs`
 
 ---
 
@@ -62,6 +62,8 @@
 | 컬럼 | 타입 | 제약 | 설명 |
 |---|---|---|---|
 | `id` | UUID | PK | 클라우드 측 환자 참조 키 |
+| `created_by_slp_id` | UUID | FK → users(id) ON DELETE RESTRICT, NOT NULL | 최초 등록 SLP |
+| `current_slp_id` | UUID | FK → users(id) ON DELETE RESTRICT, NOT NULL | 현재 담당 SLP |
 | `created_at` | TIMESTAMPTZ | NOT NULL | 참조 생성 시점 |
 
 ---
