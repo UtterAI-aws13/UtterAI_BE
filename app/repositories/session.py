@@ -8,49 +8,41 @@ from sqlalchemy import Select, select
 from sqlalchemy.orm import Session
 
 from app.core.enums import SessionStatus
-from app.models.entities import Session
+from app.models.entities import Session as SessionEntity
 
 
 class SessionRepository:
-    """Encapsulate session queries and persistence operations."""
-
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def create(self, session: Session) -> Session:
-        """Persist a new session and return the refreshed ORM object."""
-
+    def create(self, session: SessionEntity) -> SessionEntity:
         self.db.add(session)
         self.db.commit()
         self.db.refresh(session)
         return session
 
-    def get_by_id(self, session_id: uuid.UUID) -> Session | None:
-        """Return a session regardless of status for authorization checks."""
-
-        statement = select(Session).where(Session.id == session_id)
+    def get_by_id(self, session_id: uuid.UUID) -> SessionEntity | None:
+        statement = select(SessionEntity).where(SessionEntity.id == session_id)
         return self.db.execute(statement).scalar_one_or_none()
 
     def list_active(
         self,
-        therapist_id: uuid.UUID | None = None,
-        child_id: uuid.UUID | None = None,
-    ) -> list[Session]:
-        """Return non-deleted sessions filtered by owner and/or child."""
-
-        statement: Select[tuple[Session]] = select(Session).where(
-            Session.status != SessionStatus.DELETED
+        slp_id: uuid.UUID | None = None,
+        patient_ref_id: uuid.UUID | None = None,
+    ) -> list[SessionEntity]:
+        statement: Select[tuple[SessionEntity]] = select(SessionEntity).where(
+            SessionEntity.status != SessionStatus.DELETED
         )
-        if therapist_id is not None:
-            statement = statement.where(Session.therapist_id == therapist_id)
-        if child_id is not None:
-            statement = statement.where(Session.child_id == child_id)
-        statement = statement.order_by(Session.session_date.desc(), Session.created_at.desc())
+        if slp_id is not None:
+            statement = statement.where(SessionEntity.slp_id == slp_id)
+        if patient_ref_id is not None:
+            statement = statement.where(SessionEntity.patient_ref_id == patient_ref_id)
+        statement = statement.order_by(
+            SessionEntity.session_date.desc(), SessionEntity.created_at.desc()
+        )
         return list(self.db.execute(statement).scalars().all())
 
-    def update(self, session: Session) -> Session:
-        """Commit already-mutated session fields and return the refreshed row."""
-
+    def update(self, session: SessionEntity) -> SessionEntity:
         self.db.add(session)
         self.db.commit()
         self.db.refresh(session)

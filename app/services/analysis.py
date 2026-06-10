@@ -13,15 +13,15 @@ from app.core.config import get_settings
 from app.core.enums import AnalysisJobStatus, AudioFileStatus, SessionStatus, UserRole
 from app.infrastructure.ai_client.client import AIClient
 from app.models.entities import AnalysisJob
-from app.repositories.analysis_job import AnalysisJobRepository
-from app.repositories.audio import AudioFileRepository
-from app.repositories.session import SessionRepository
-from app.repositories.template import TemplateRepository
 from app.observability.metrics import (
     record_analysis_job_created,
     record_analysis_job_dispatch_failed,
     record_analysis_job_dispatched,
 )
+from app.repositories.analysis_job import AnalysisJobRepository
+from app.repositories.audio import AudioFileRepository
+from app.repositories.session import SessionRepository
+from app.repositories.template import TemplateRepository
 from app.schemas.analysis import (
     AnalysisJobCancelResponse,
     AnalysisJobCreateRequest,
@@ -32,10 +32,20 @@ from app.schemas.auth import UserRead
 
 settings = get_settings()
 
+_CANCELLABLE_STATUSES = {
+    AnalysisJobStatus.PENDING,
+    AnalysisJobStatus.DOWNLOADING,
+    AnalysisJobStatus.RETRYING,
+}
+
+_TERMINAL_STATUSES = {
+    AnalysisJobStatus.CANCELLED,
+    AnalysisJobStatus.COMPLETED,
+    AnalysisJobStatus.FAILED,
+}
+
 
 class AnalysisJobService:
-    """Coordinate job creation, visibility, cancellation, and progress updates."""
-
     def __init__(self, db: DbSession) -> None:
         self.analysis_repository = AnalysisJobRepository(db)
         self.audio_repository = AudioFileRepository(db)
@@ -44,12 +54,6 @@ class AnalysisJobService:
         self.ai_client = AIClient()
 
     def create(self, request: AnalysisJobCreateRequest, current_user: UserRead) -> AnalysisJobRead:
-        """Create a new analysis job for an uploaded audio file.
-
-        Only uploaded audio can be analyzed. The service also enforces that one
-        session cannot have multiple active analysis jobs at the same time.
-        """
-
         tracer = trace.get_tracer(__name__)
         with tracer.start_as_current_span("analysis_job.create") as span:
             session = self._get_accessible_session(request.session_id, current_user)
@@ -75,7 +79,6 @@ class AnalysisJobService:
                     detail="An active analysis job already exists for this session.",
                 )
 
-            template_content: str | None = None
             if request.template_id is not None:
                 template = self.template_repository.get_by_id(request.template_id)
                 if template is None:
@@ -86,24 +89,21 @@ class AnalysisJobService:
                 is_accessible = (
                     template.is_system
                     or current_user.role == UserRole.ADMIN
-                    or template.therapist_id == current_user.id
+                    or template.owner_id == current_user.id
                 )
                 if not is_accessible:
                     raise HTTPException(
                         status_code=status.HTTP_403_FORBIDDEN,
                         detail="You do not have access to this template.",
                     )
-                template_content = template.content
                 self.template_repository.increment_use_count(template)
 
             now = datetime.now(UTC)
             job = AnalysisJob(
                 session_id=session.id,
-                audio_id=audio_file.id,
-                status=AnalysisJobStatus.REQUESTED,
-                progress=0,
-                current_stage="Analysis requested",
-                requested_at=now,
+                audio_file_id=audio_file.id,
+                status=AnalysisJobStatus.PENDING,
+                created_at=now,
             )
             created_job = self.analysis_repository.create(job)
             record_analysis_job_created()
@@ -114,33 +114,25 @@ class AnalysisJobService:
             dispatch_payload = {
                 "jobId": str(created_job.id),
                 "sessionId": str(created_job.session_id),
-                "audioId": str(created_job.audio_id),
-                "audioS3Bucket": audio_file.s3_bucket,
-                "audioS3Key": audio_file.s3_key,
-                "callbackUrl": (
-                    f"{settings.public_api_base_url.rstrip('/')}"
-                    "/api/v1/internal/analysis-results/callback"
-                ),
+                "audioFileId": str(created_job.audio_file_id),
+                "audioObjectKey": audio_file.object_key,
                 "progressCallbackUrl": (
                     f"{settings.public_api_base_url.rstrip('/')}"
                     f"/api/v1/internal/analysis-jobs/{created_job.id}/progress"
                 ),
-                "analysisTemplate": template_content,
             }
+            if request.template_id is not None:
+                dispatch_payload["templateId"] = str(request.template_id)
+
             try:
                 dispatch_result = self.ai_client.dispatch_analysis_job(dispatch_payload)
             except Exception:
                 record_analysis_job_dispatch_failed()
                 raise
+
             if dispatch_result is not None:
                 record_analysis_job_dispatched()
-                created_job.external_ai_job_id = dispatch_result.get("externalAiJobId")
-                created_job.status = AnalysisJobStatus.QUEUED
-                created_job.current_stage = dispatch_result.get(
-                    "currentStage",
-                    "Queued in AI service",
-                )
-                created_job.progress = int(dispatch_result.get("progress", 0))
+                created_job.status = AnalysisJobStatus.DOWNLOADING
                 created_job = self.analysis_repository.update(created_job)
                 session.status = SessionStatus.ANALYSIS_PROCESSING
                 self.session_repository.update(session)
@@ -155,37 +147,24 @@ class AnalysisJobService:
         session_id: uuid.UUID | None = None,
         status_filter: AnalysisJobStatus | None = None,
     ) -> list[AnalysisJobRead]:
-        """List analysis jobs visible to the current user."""
-
         if session_id is not None:
             self._get_accessible_session(session_id, current_user)
-
         jobs = self.analysis_repository.list_visible(current_user, session_id, status_filter)
         return [AnalysisJobRead.model_validate(job) for job in jobs]
 
     def get(self, job_id: uuid.UUID, current_user: UserRead) -> AnalysisJobRead:
-        """Return one accessible analysis job."""
-
         job = self._get_accessible_job(job_id, current_user)
         return AnalysisJobRead.model_validate(job)
 
     def cancel(self, job_id: uuid.UUID, current_user: UserRead) -> AnalysisJobCancelResponse:
-        """Cancel an active analysis job if it is still cancellable."""
-
         job = self._get_accessible_job(job_id, current_user)
-        cancellable = {
-            AnalysisJobStatus.REQUESTED,
-            AnalysisJobStatus.QUEUED,
-            AnalysisJobStatus.PROCESSING,
-        }
-        if job.status not in cancellable:
+        if job.status not in _CANCELLABLE_STATUSES:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="This analysis job can no longer be cancelled.",
             )
 
         job.status = AnalysisJobStatus.CANCELLED
-        job.current_stage = "Cancelled by user"
         job.completed_at = datetime.now(UTC)
         updated_job = self.analysis_repository.update(job)
 
@@ -204,60 +183,41 @@ class AnalysisJobService:
         job_id: uuid.UUID,
         request: AnalysisJobProgressCallbackRequest,
     ) -> AnalysisJobRead:
-        """Apply progress updates from the AI service.
-
-        Progress callbacks must not resurrect terminal jobs. If a job is already
-        cancelled or completed, later progress updates are rejected to protect
-        state machine consistency.
-        """
-
         job = self.analysis_repository.get_by_id(job_id)
         if job is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Analysis job not found.",
             )
-        if job.status in {
-            AnalysisJobStatus.CANCELLED,
-            AnalysisJobStatus.COMPLETED,
-            AnalysisJobStatus.FAILED,
-            AnalysisJobStatus.EXPIRED,
-        }:
+        if job.status in _TERMINAL_STATUSES:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Terminal jobs cannot accept progress updates.",
             )
-
-        if request.status in {
-            AnalysisJobStatus.COMPLETED,
-            AnalysisJobStatus.CANCELLED,
-            AnalysisJobStatus.EXPIRED,
-        }:
+        if request.status in {AnalysisJobStatus.COMPLETED, AnalysisJobStatus.CANCELLED}:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Use domain-specific completion or cancellation flows for terminal updates.",
             )
 
         job.status = request.status
-        job.progress = request.progress
-        job.current_stage = request.current_stage
-        if request.status == AnalysisJobStatus.PROCESSING and job.started_at is None:
+        job.pipeline_stage = request.pipeline_stage
+        if request.error_code is not None:
+            job.error_code = request.error_code
+        if request.error_message is not None:
+            job.error_message = request.error_message
+        if request.status == AnalysisJobStatus.DOWNLOADING and job.started_at is None:
             job.started_at = datetime.now(UTC)
         updated_job = self.analysis_repository.update(job)
 
         session = self.session_repository.get_by_id(job.session_id)
-        if session is not None and request.status in {
-            AnalysisJobStatus.QUEUED,
-            AnalysisJobStatus.PROCESSING,
-        }:
+        if session is not None and request.status not in _TERMINAL_STATUSES:
             session.status = SessionStatus.ANALYSIS_PROCESSING
             self.session_repository.update(session)
 
         return AnalysisJobRead.model_validate(updated_job)
 
     def _get_accessible_session(self, session_id: uuid.UUID, current_user: UserRead):
-        """Load a session and enforce therapist ownership or admin override."""
-
         session = self.session_repository.get_by_id(session_id)
         if session is None or session.status == SessionStatus.DELETED:
             raise HTTPException(
@@ -266,7 +226,7 @@ class AnalysisJobService:
             )
         if current_user.role == UserRole.ADMIN:
             return session
-        if current_user.role == UserRole.THERAPIST and session.therapist_id == current_user.id:
+        if current_user.role == UserRole.THERAPIST and session.slp_id == current_user.id:
             return session
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -274,8 +234,6 @@ class AnalysisJobService:
         )
 
     def _get_accessible_job(self, job_id: uuid.UUID, current_user: UserRead) -> AnalysisJob:
-        """Load a job and enforce visibility through the owning session."""
-
         job = self.analysis_repository.get_by_id(job_id)
         if job is None:
             raise HTTPException(
