@@ -43,7 +43,7 @@ class User(TimestampMixin, Base):
 
 
 class PatientRef(Base):
-    """Cloud-side patient reference. Stores basic identifying info for MVP."""
+    """Cloud-to-on-prem patient reference pointer."""
 
     __tablename__ = "patient_refs"
 
@@ -53,6 +53,18 @@ class PatientRef(Base):
     )
     current_slp_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class Patient(Base):
+    """Cloud-side patient info. 1:1 with PatientRef."""
+
+    __tablename__ = "patients"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    patient_ref_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("patient_refs.id", ondelete="RESTRICT"), nullable=False, unique=True
     )
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     birth_date: Mapped[date | None] = mapped_column(Date, nullable=True)

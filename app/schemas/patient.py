@@ -13,7 +13,7 @@ class PatientCreateRequest(BaseModel):
     birth_date: date | None = None
     gender: str | None = Field(default=None, pattern=r'^[MFU]$')
     memo: str | None = None
-    slp_id: uuid.UUID | None = None
+    slp_id: uuid.UUID | None = None  # ADMIN only: assign to specific SLP
 
 
 class PatientUpdateRequest(BaseModel):
@@ -24,14 +24,15 @@ class PatientUpdateRequest(BaseModel):
 
 
 class PatientRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=False)
 
     id: uuid.UUID
+    patient_ref_id: uuid.UUID
     name: str
     birth_date: date | None
     gender: str | None
     memo: str | None
+    status: PatientStatus
     created_by_slp_id: uuid.UUID
     current_slp_id: uuid.UUID
-    status: PatientStatus
     created_at: datetime
