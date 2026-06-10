@@ -53,6 +53,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 구현됨 | 환자 목록 조회 | 치료사, 관리자 | GET | `/api/v1/patients` | - | - | 치료사는 본인 소유 환자만, 관리자는 전체 조회 |
 | 구현됨 | 환자 상세 조회 | 치료사, 관리자 | GET | `/api/v1/patients/{patientId}` | - | - | 환자 기본 정보 조회 |
+| 구현됨 | patient_ref_id로 환자 조회 | 치료사, 관리자 | GET | `/api/v1/patients/by-ref/{patientRefId}` | - | - | 세션의 `patient_ref_id` 기준으로 환자 정보 조회 |
 | 구현됨 | 환자 등록 | 치료사, 관리자 | POST | `/api/v1/patients` | - | `name`, `birth_date`, `gender`, `memo`, `slp_id(optional, admin only)` | 환자 정보 등록 |
 | 구현됨 | 환자 정보 수정 | 치료사, 관리자 | PATCH | `/api/v1/patients/{patientId}` | - | `name`, `birth_date`, `gender`, `memo` | 환자 정보 수정 |
 | 구현됨 | 환자 삭제 | 치료사, 관리자 | DELETE | `/api/v1/patients/{patientId}` | - | - | soft delete 처리 |
@@ -94,7 +95,7 @@
 
 ### 구현 메모
 
-- presigned URL 발급 시 서버가 `audio_files`의 `PENDING` row를 먼저 만든다.
+- presigned URL 발급 시 서버가 `audio_files`의 `PENDING_UPLOAD` row를 먼저 만든다.
 - 업로드 완료 API는 `s3_key` 기준으로 row를 찾아 `UPLOADED`로 상태 전이한다.
 - 업로드 완료 시 세션 상태는 `AUDIO_UPLOADED`로 변경된다.
 
