@@ -2,7 +2,7 @@
 
 > **기준**: `entities.py` 기반 (`app/models/entities.py`)  
 > **DB**: PostgreSQL (RDS) — BE 전용 (AI DB는 별도 `rag_chunks` 테이블)  
-> **마지막 마이그레이션**: `20260610_0012_remove_viewer_from_user_role`
+> **마지막 마이그레이션**: `20260610_0013_remove_approval_history`
 
 ---
 
@@ -22,7 +22,6 @@
 | `templates` | SLP가 업로드한 리포트 템플릿 파일 |
 | `reports` | AI 생성 리포트 헤더 |
 | `report_segments` | 리포트 SOAP 섹션 단위 |
-| `approval_history` | 리포트 승인/반려 이력 |
 
 ---
 
@@ -265,19 +264,6 @@ PENDING → DOWNLOADING → PREPROCESSING
 
 ---
 
-### `approval_history`
-
-| 컬럼 | 타입 | 제약 | 설명 |
-|---|---|---|---|
-| `id` | UUID | PK | |
-| `report_id` | UUID | FK → reports(id) ON DELETE RESTRICT | |
-| `approved_by` | UUID | FK → users(id) ON DELETE RESTRICT | |
-| `action` | ENUM(approval_action) | NOT NULL | `APPROVED`, `REJECTED`, `REVISION_REQUESTED` |
-| `comment` | TEXT | nullable | 승인/반려 코멘트 |
-| `created_at` | TIMESTAMPTZ | NOT NULL | |
-
----
-
 ## AI DB (`UtterAI_AI`)
 
 AI 서버 전용 DB. BE RDS와 분리된 PostgreSQL + pgvector.
@@ -312,7 +298,6 @@ AI 서버 전용 DB. BE RDS와 분리된 PostgreSQL + pgvector.
 | `template_status` | `ACTIVE`, `DELETED` |
 | `report_status` | `DRAFT`, `REVIEWING`, `APPROVED`, `FINALIZED`, `DELETED` |
 | `report_segment_type` | `SUBJECTIVE`, `OBJECTIVE`, `ASSESSMENT`, `PLAN`, `CUSTOM` |
-| `approval_action` | `APPROVED`, `REJECTED`, `REVISION_REQUESTED` |
 
 ---
 

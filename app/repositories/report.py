@@ -1,4 +1,4 @@
-"""Database access helpers for report and approval history persistence."""
+"""Database access helpers for report persistence."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.enums import ReportStatus, UserRole
-from app.models.entities import ApprovalHistory, Report, ReportSegment, Session as SessionEntity
+from app.models.entities import Report, ReportSegment, Session as SessionEntity
 from app.schemas.auth import UserRead
 
 
@@ -70,16 +70,3 @@ class ReportRepository:
         self.db.refresh(segment)
         return segment
 
-    def create_approval(self, approval: ApprovalHistory) -> ApprovalHistory:
-        self.db.add(approval)
-        self.db.commit()
-        self.db.refresh(approval)
-        return approval
-
-    def list_approvals(self, report_id: uuid.UUID) -> list[ApprovalHistory]:
-        statement = (
-            select(ApprovalHistory)
-            .where(ApprovalHistory.report_id == report_id)
-            .order_by(ApprovalHistory.created_at.desc())
-        )
-        return list(self.db.execute(statement).scalars().all())

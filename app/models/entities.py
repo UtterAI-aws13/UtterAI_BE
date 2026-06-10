@@ -10,7 +10,6 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.enums import (
     AnalysisJobStatus,
-    ApprovalAction,
     AudioFileStatus,
     ReportSegmentType,
     ReportStatus,
@@ -295,18 +294,3 @@ class ReportSegment(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
-class ApprovalHistory(Base):
-    __tablename__ = "approval_history"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    report_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("reports.id", ondelete="RESTRICT"), nullable=False
-    )
-    approved_by: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
-    )
-    action: Mapped[ApprovalAction] = mapped_column(
-        Enum(ApprovalAction, name="approval_action"), nullable=False
-    )
-    comment: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

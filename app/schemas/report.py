@@ -1,4 +1,4 @@
-"""Schemas for report, report segment, and approval APIs."""
+"""Schemas for report and report segment APIs."""
 
 import uuid
 from datetime import datetime
@@ -6,7 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
-from app.core.enums import ApprovalAction, ReportSegmentType, ReportStatus
+from app.core.enums import ReportSegmentType, ReportStatus
 
 
 class ReportRead(BaseModel):
@@ -49,19 +49,3 @@ class ReportSegmentUpdateRequest(BaseModel):
 
 class ReportStatusUpdateRequest(BaseModel):
     status: ReportStatus
-
-
-class ApprovalHistoryRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: uuid.UUID
-    report_id: uuid.UUID
-    approved_by: uuid.UUID
-    action: ApprovalAction
-    comment: str | None
-    created_at: datetime
-
-
-class ApprovalCreateRequest(BaseModel):
-    action: ApprovalAction
-    comment: str | None = None

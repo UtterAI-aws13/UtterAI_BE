@@ -97,7 +97,3 @@ class ReportSegmentType(StrEnum):
     CUSTOM = "CUSTOM"
 
 
-class ApprovalAction(StrEnum):
-    APPROVED = "APPROVED"
-    REJECTED = "REJECTED"
-    REVISION_REQUESTED = "REVISION_REQUESTED"

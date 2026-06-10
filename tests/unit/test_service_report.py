@@ -8,7 +8,6 @@ import pytest
 from fastapi import HTTPException
 
 from app.core.enums import (
-    ApprovalAction,
     ReportStatus,
     SessionStatus,
     UserRole,
@@ -18,7 +17,6 @@ from app.models.entities import Report, ReportSegment
 from app.models.entities import Session as SessionEntity
 from app.schemas.auth import UserRead
 from app.schemas.report import (
-    ApprovalCreateRequest,
     ReportSegmentUpdateRequest,
     ReportStatusUpdateRequest,
 )
@@ -60,22 +58,6 @@ def _make_report(session_id: uuid.UUID, status: ReportStatus = ReportStatus.DRAF
     r.generated_at = datetime.now()
     r.updated_at = datetime.now()
     return r
-
-
-def _make_approval(
-    report_id: uuid.UUID,
-    approved_by: uuid.UUID,
-    action: ApprovalAction = ApprovalAction.APPROVED,
-) -> MagicMock:
-    from app.models.entities import ApprovalHistory
-    a = MagicMock(spec=ApprovalHistory)
-    a.id = uuid.uuid4()
-    a.report_id = report_id
-    a.approved_by = approved_by
-    a.action = action
-    a.comment = None
-    a.created_at = datetime.now()
-    return a
 
 
 def _make_segment(report_id: uuid.UUID) -> MagicMock:
@@ -202,62 +184,3 @@ class TestReportServiceUpdateSegment:
         assert exc.value.status_code == 404
 
 
-class TestReportServiceApproval:
-    def test_approved_action_sets_report_status_to_approved(self, service):
-        user = _make_user()
-        session = _make_session(user.id)
-        report = _make_report(session.id, ReportStatus.REVIEWING)
-        approval = _make_approval(report.id, user.id, ApprovalAction.APPROVED)
-
-        service.report_repository.get_by_id.return_value = report
-        service.session_repository.get_by_id.return_value = session
-        service.report_repository.create_approval.return_value = approval
-        service.report_repository.update.return_value = report
-
-        service.create_approval(
-            report.id,
-            ApprovalCreateRequest(action=ApprovalAction.APPROVED, comment="승인"),
-            user,
-        )
-
-        assert report.status == ReportStatus.APPROVED
-
-    def test_rejected_action_keeps_reviewing_status(self, service):
-        user = _make_user()
-        session = _make_session(user.id)
-        report = _make_report(session.id, ReportStatus.REVIEWING)
-        approval = _make_approval(report.id, user.id, ApprovalAction.REJECTED)
-
-        service.report_repository.get_by_id.return_value = report
-        service.session_repository.get_by_id.return_value = session
-        service.report_repository.create_approval.return_value = approval
-        service.report_repository.update.return_value = report
-
-        service.create_approval(
-            report.id,
-            ApprovalCreateRequest(action=ApprovalAction.REJECTED, comment="수정 필요"),
-            user,
-        )
-
-        assert report.status == ReportStatus.REVIEWING
-
-    def test_approval_sets_approved_by_to_current_user(self, service):
-        user = _make_user()
-        session = _make_session(user.id)
-        report = _make_report(session.id, ReportStatus.REVIEWING)
-        approval = _make_approval(report.id, user.id, ApprovalAction.APPROVED)
-
-        service.report_repository.get_by_id.return_value = report
-        service.session_repository.get_by_id.return_value = session
-        service.report_repository.create_approval.return_value = approval
-        service.report_repository.update.return_value = report
-
-        service.create_approval(
-            report.id,
-            ApprovalCreateRequest(action=ApprovalAction.APPROVED),
-            user,
-        )
-
-        created = service.report_repository.create_approval.call_args[0][0]
-        assert created.approved_by == user.id
-        assert created.action == ApprovalAction.APPROVED
