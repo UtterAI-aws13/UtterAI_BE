@@ -45,6 +45,17 @@ class PatientService:
         patient, ref = self._get_accessible(patient_id, current_user)
         return self._to_read(patient, ref)
 
+    def get_by_ref_id(self, patient_ref_id: uuid.UUID, current_user: UserRead) -> PatientRead:
+        patient = self.patient_repo.get_by_ref_id(patient_ref_id)
+        if patient is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found.")
+        ref = self.ref_repo.get_by_id(patient.patient_ref_id)
+        if ref is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient ref not found.")
+        if current_user.role != UserRole.ADMIN and ref.current_slp_id != current_user.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
+        return self._to_read(patient, ref)
+
     def update(self, patient_id: uuid.UUID, request: PatientUpdateRequest, current_user: UserRead) -> PatientRead:
         patient, ref = self._get_accessible(patient_id, current_user)
         for field, value in request.model_dump(exclude_unset=True).items():
