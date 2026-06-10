@@ -2,7 +2,7 @@
 
 > **기준**: `entities.py` 기반 (`app/models/entities.py`)  
 > **DB**: PostgreSQL (RDS) — BE 전용 (AI DB는 별도 `rag_chunks` 테이블)  
-> **마지막 마이그레이션**: `20260610_0015_add_patient_info_fields` (patients 테이블 신설)
+> **마지막 마이그레이션**: `20260610_0013_remove_approval_history` (approval_history 테이블 제거)
 
 ---
 
