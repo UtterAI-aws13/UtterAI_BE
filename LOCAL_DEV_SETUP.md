@@ -49,15 +49,26 @@ uvicorn app.main:app --reload
 
 다음 순서로 검증하면 상태 전이와 권한 흐름을 빠르게 확인할 수 있다.
 
+**BE만 검증 (AI Worker 없이)**
+
 1. `POST /api/v1/auth/signup`
 2. `POST /api/v1/auth/login`
 3. `POST /api/v1/sessions`
 4. `POST /api/v1/audio-files/presigned-url`
 5. `PUT <presigned-url>` (S3 직접 업로드)
 6. `POST /api/v1/audio-files/{audioFileId}/complete`
-7. `POST /api/v1/analysis-jobs`
-8. `POST /api/v1/internal/analysis-jobs/{jobId}/progress`
-9. `POST /api/v1/internal/analysis-results/callback`
+7. `POST /api/v1/analysis-jobs` → SQS 발행 (`.env`에 `SQS_AUDIO_PREPROCESS_QUEUE_URL` 필요)
+
+**AI Worker 포함 E2E 검증** (step 7 이후)
+
+```bash
+# UtterAI_AI 레포에서 별도 터미널로 실행
+python scripts/run_cpu_worker.py    # SQS 폴링 시작
+python scripts/run_ml_gpu_worker.py # GPU inference 큐 폴링 시작
+```
+
+8. CPU Worker가 음성 전처리 + VAD 수행 → `utterai-dev-raw-audio/intermediate/...` 저장
+9. ML GPU Worker가 화자분리 + STT + alignment 수행 → `transcripts` / `transcript_segments` RDS 저장, `analysis_jobs.status = COMPLETED`
 10. `GET /api/v1/sessions/{sessionId}/transcript`
 11. `PATCH /api/v1/transcripts/{transcriptId}/segments/{segmentId}`
 12. `PATCH /api/v1/transcripts/{transcriptId}/finalize`
@@ -65,13 +76,14 @@ uvicorn app.main:app --reload
 14. `GET /api/v1/reports/{reportId}/segments`
 15. `PATCH /api/v1/reports/{reportId}/segments/{segmentId}`
 
+> AI Worker 설정은 `UtterAI_AI/LOCAL_DEV_SETUP.md` 참고.
+
 ## 4. What You Need To Prepare
 
 실제 워크플로 검증 전 아래 항목은 직접 준비해야 한다.
 
-- 사용할 로컬 `.env`
+- 사용할 로컬 `.env` (`SQS_AUDIO_PREPROCESS_QUEUE_URL` 포함)
 - S3를 붙일지, 아니면 presigned URL 단계만 형식 검증할지 결정
-- AI callback에 보낼 샘플 payload
 - 최소 2개 계정
   - `SLP`
   - `ADMIN`
@@ -85,11 +97,8 @@ uvicorn app.main:app --reload
 - admin 계정 1개
 - patient 1명
 - session 1개
-- audio file 1개
+- audio file 1개 (실제 음성 파일, 10초 이상 권장)
 - analysis job 1개
-- analysis result callback payload 1개
-  - speakers 2명 이상
-  - utterances 3개 이상
 
 ## 6. Next After Setup
 
@@ -105,6 +114,6 @@ uvicorn app.main:app --reload
 ## 7. Known Gaps
 
 - 실제 S3 object 존재 검증까지 하려면 AWS 자격 증명이 필요하다.
-- AI 서버는 아직 mock/callback 수동 호출 기준이다.
 - 현재 저장소에는 자동 시드 스크립트가 없다.
-- 실제 통합 검증 기록은 아직 남아 있지 않다.
+- AI Worker 취소 처리: `analysis_jobs.status = CANCELLED`로 업데이트해도 이미 SQS에 들어간 메시지는 Worker가 끝까지 처리한다. Worker가 스테이지 시작 전 DB 상태를 확인하는 로직이 아직 없다.
+- transcript → report 연결 흐름은 LLM GPU Worker 구현 완료 후 검증 가능하다.
