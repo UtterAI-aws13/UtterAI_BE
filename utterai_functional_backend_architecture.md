@@ -209,22 +209,20 @@ User 도메인은 사용자 계정과 프로필 정보를 관리한다.
 
 ### 기능 목적
 
-Patient Profile 도메인은 분석 대상 아동 정보를 관리한다.
+Patient Profile 도메인은 분석 대상 환자의 클라우드 측 참조 키를 관리한다.
 
-치료사는 여러 아동 프로필을 등록할 수 있다.
+실제 환자 정보(이름, 생년월일 등)는 온프레미스 DB에만 보관되며, 클라우드에는 UUID 참조 키만 존재한다.
 
-### 저장 정보
+SLP는 여러 환자 참조를 등록할 수 있다.
+
+### 저장 정보 (`patient_refs`)
 
 | 필드 | 설명 |
 |---|---|
-| `child_id` | 아동 고유 ID |
-| `therapist_id` | 담당 치료사 ID |
-| `name` | 아동 이름 또는 별칭 |
-| `birth_date` | 생년월일 |
-| `gender` | 성별 |
-| `memo` | 치료사 메모 |
-| `created_at` | 생성일 |
-| `updated_at` | 수정일 |
+| `id` | 클라우드 측 환자 참조 UUID |
+| `created_by_slp_id` | 최초 등록 SLP (FK → users) |
+| `current_slp_id` | 현재 담당 SLP (FK → users) |
+| `created_at` | 참조 생성일 |
 
 ### 주요 기능
 

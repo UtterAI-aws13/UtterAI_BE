@@ -31,7 +31,7 @@
 
 ## 2. Users / SLPs
 
-현재 사용자 관리 API는 구현 전이다. 문서상 `therapists`라는 이름을 쓰고 있었지만 실제 구현에서는 `users` 또는 `admin user management`로 재정리할 가능성이 높다.
+사용자 관리 API. Role은 `ADMIN`, `SLP` 두 가지만 존재한다.
 
 | 상태 | 기능 | 사용자 | Method | URL | Query Param | Request Body | 설명 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -57,19 +57,11 @@
 | 구현됨 | 환자 정보 수정 | 치료사, 관리자 | PATCH | `/api/v1/patients/{patientId}` | - | `name`, `birth_date`, `gender`, `memo` | 환자 정보 수정 |
 | 구현됨 | 환자 삭제 | 치료사, 관리자 | DELETE | `/api/v1/patients/{patientId}` | - | - | soft delete 처리 |
 
-### 후속 예정
-
-| 상태 | 기능 | 사용자 | Method | URL | Query Param | Request Body | 설명 |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 미구현 | 보호자 공유 권한 조회 | 치료사, 관리자 | GET | `/api/v1/patients/{patientId}/access-grants` | - | - | 환자 공유 권한 목록 조회 |
-| 미구현 | 보호자 공유 권한 생성 | 치료사, 관리자 | POST | `/api/v1/patients/{patientId}/access-grants` | - | `granteeUserId`, `accessLevel`, `expiresAt(optional)` | 보호자/조회 사용자 공유 권한 생성 |
-| 미구현 | 보호자 공유 권한 해제 | 치료사, 관리자 | DELETE | `/api/v1/patients/{patientId}/access-grants/{grantId}` | - | - | 공유 권한 해제 |
-
 ---
 
 ## 4. Sessions
 
-세션은 아동에 종속되지만, 생성/조회 동선의 단순화를 위해 `/sessions`를 기본 리소스로 둔다.
+세션은 환자에 종속되지만, 생성/조회 동선의 단순화를 위해 `/sessions`를 기본 리소스로 둔다.
 
 ### 구현 완료
 

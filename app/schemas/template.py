@@ -31,6 +31,7 @@ class TemplateRead(BaseModel):
     description: str | None
     template_type: TemplateType
     sections_json: dict[str, Any] | None
+    file_s3_key: str | None
     file_original_name: str | None
     is_system: bool
     use_count: int
