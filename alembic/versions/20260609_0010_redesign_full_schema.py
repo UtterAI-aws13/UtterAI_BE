@@ -151,7 +151,13 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id', name=op.f('pk_transcript_segments'))
     )
 
-    # Phase 5: Alter existing tables
+    # Phase 5: Truncate tables that will receive new NOT NULL columns (dev env)
+    op.execute("TRUNCATE TABLE sessions CASCADE")
+    op.execute("TRUNCATE TABLE audio_files CASCADE")
+    op.execute("TRUNCATE TABLE reports CASCADE")
+    op.execute("TRUNCATE TABLE analysis_jobs CASCADE")
+
+    # Phase 6: Alter existing tables
     op.add_column('analysis_jobs', sa.Column('audio_file_id', sa.UUID(), nullable=False))
     op.add_column('analysis_jobs', sa.Column('pipeline_stage', sa.String(length=255), nullable=True))
     op.add_column('analysis_jobs', sa.Column('retry_count', sa.Integer(), server_default='0', nullable=False))
