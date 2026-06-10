@@ -24,7 +24,7 @@ from app.schemas.auth import UserRead
 from app.services.analysis import AnalysisJobService
 
 
-def _make_user(role: UserRole = UserRole.THERAPIST) -> UserRead:
+def _make_user(role: UserRole = UserRole.SLP) -> UserRead:
     return UserRead(
         id=uuid.uuid4(),
         email="slp@test.com",

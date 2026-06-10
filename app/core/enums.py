@@ -5,7 +5,7 @@ from enum import StrEnum
 
 class UserRole(StrEnum):
     ADMIN = "ADMIN"
-    THERAPIST = "THERAPIST"
+    SLP = "SLP"
     VIEWER = "VIEWER"
 
 
@@ -53,14 +53,14 @@ class AnalysisJobStatus(StrEnum):
 
 
 class TargetSpeaker(StrEnum):
-    CHILD = "CHILD"
-    THERAPIST = "THERAPIST"
+    PATIENT = "PATIENT"
+    SLP = "SLP"
     ALL = "ALL"
 
 
 class SpeakerRole(StrEnum):
-    CHILD = "CHILD"
-    THERAPIST = "THERAPIST"
+    PATIENT = "PATIENT"
+    SLP = "SLP"
     GUARDIAN = "GUARDIAN"
     UNKNOWN = "UNKNOWN"
 

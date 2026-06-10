@@ -14,7 +14,7 @@ from app.schemas.template import TemplateCreateRequest, TemplateUpdateRequest
 from app.services.template import TemplateService
 
 
-def _make_user(role: UserRole = UserRole.THERAPIST) -> UserRead:
+def _make_user(role: UserRole = UserRole.SLP) -> UserRead:
     return UserRead(
         id=uuid.uuid4(),
         email="slp@test.com",
@@ -86,21 +86,21 @@ class TestTemplateServiceGet:
             service.get(template.id, _make_user())
         assert exc.value.status_code == 404
 
-    def test_therapist_can_access_own_template(self, service):
+    def test_slp_can_access_own_template(self, service):
         user = _make_user()
         template = _make_template(owner_id=user.id)
         service.repository.get_by_id.return_value = template
         result = service._get_accessible(template.id, user)
         assert result is template
 
-    def test_therapist_can_access_system_template(self, service):
+    def test_slp_can_access_system_template(self, service):
         user = _make_user()
         template = _make_template(is_system=True)
         service.repository.get_by_id.return_value = template
         result = service._get_accessible(template.id, user)
         assert result is template
 
-    def test_therapist_cannot_access_other_therapist_template(self, service):
+    def test_slp_cannot_access_other_slp_template(self, service):
         user = _make_user()
         template = _make_template(owner_id=uuid.uuid4(), is_system=False)
         service.repository.get_by_id.return_value = template
@@ -126,7 +126,7 @@ class TestTemplateServiceUpdate:
             service.update(template.id, TemplateUpdateRequest(name="수정"), user)
         assert exc.value.status_code == 403
 
-    def test_cannot_modify_other_therapist_template(self, service):
+    def test_cannot_modify_other_slp_template(self, service):
         user = _make_user()
         template = _make_template(owner_id=uuid.uuid4(), is_system=False)
         service.repository.get_by_id.return_value = template

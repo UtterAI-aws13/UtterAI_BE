@@ -25,7 +25,7 @@ from app.schemas.report import (
 from app.services.report import ReportService
 
 
-def _make_user(role: UserRole = UserRole.THERAPIST) -> UserRead:
+def _make_user(role: UserRole = UserRole.SLP) -> UserRead:
     return UserRead(
         id=uuid.uuid4(),
         email="slp@test.com",

@@ -160,7 +160,7 @@ class AudioService:
             )
         if current_user.role == UserRole.ADMIN:
             return session
-        if current_user.role == UserRole.THERAPIST and session.slp_id == current_user.id:
+        if current_user.role == UserRole.SLP and session.slp_id == current_user.id:
             return session
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

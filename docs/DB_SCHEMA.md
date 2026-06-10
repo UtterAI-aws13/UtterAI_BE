@@ -36,7 +36,7 @@
 | `email` | VARCHAR(255) | UNIQUE, NOT NULL | 로그인 이메일 |
 | `password_hash` | TEXT | NOT NULL | bcrypt 해시 |
 | `name` | VARCHAR(100) | NOT NULL | 표시 이름 |
-| `role` | ENUM(user_role) | NOT NULL | `ADMIN`, `THERAPIST`, `VIEWER` |
+| `role` | ENUM(user_role) | NOT NULL | `ADMIN`, `SLP`, `VIEWER` |
 | `status` | ENUM(user_status) | NOT NULL, default `ACTIVE` | `ACTIVE`, `INACTIVE` |
 | `created_at` | TIMESTAMPTZ | NOT NULL, server_default | |
 | `updated_at` | TIMESTAMPTZ | NOT NULL, server_default | |
@@ -170,7 +170,7 @@ PENDING → DOWNLOADING → PREPROCESSING
 | `session_id` | UUID | FK → sessions(id) ON DELETE RESTRICT | |
 | `segment_index` | INTEGER | NOT NULL | 발화 순서 (0-based) |
 | `speaker_label` | VARCHAR(50) | nullable | 다이어라이제이션 레이블 (예: `SPEAKER_00`) |
-| `speaker_role` | ENUM(speaker_role) | NOT NULL, default `UNKNOWN` | `CHILD`, `THERAPIST`, `GUARDIAN`, `UNKNOWN` |
+| `speaker_role` | ENUM(speaker_role) | NOT NULL, default `UNKNOWN` | `PATIENT`, `SLP`, `GUARDIAN`, `UNKNOWN` |
 | `start_ms` | INTEGER | nullable | 발화 시작 (밀리초) |
 | `end_ms` | INTEGER | nullable | 발화 종료 (밀리초) |
 | `original_text` | TEXT | nullable | ASR 원본 텍스트 |
@@ -190,7 +190,7 @@ PENDING → DOWNLOADING → PREPROCESSING
 | `id` | UUID | PK | |
 | `session_id` | UUID | FK → sessions(id) ON DELETE RESTRICT | |
 | `job_id` | UUID | FK → analysis_jobs(id) ON DELETE RESTRICT | |
-| `target_speaker` | ENUM(target_speaker) | NOT NULL | `CHILD`, `THERAPIST`, `ALL` |
+| `target_speaker` | ENUM(target_speaker) | NOT NULL | `PATIENT`, `SLP`, `ALL` |
 | `total_utterances` | INTEGER | nullable | 총 발화 수 |
 | `ntw` | INTEGER | nullable | 총 낱말 수 |
 | `ndw` | INTEGER | nullable | 다른 낱말 수 |
@@ -296,13 +296,13 @@ AI 서버 전용 DB. BE RDS와 분리된 PostgreSQL + pgvector.
 
 | Enum | 값 |
 |---|---|
-| `user_role` | `ADMIN`, `THERAPIST`, `VIEWER` |
+| `user_role` | `ADMIN`, `SLP`, `VIEWER` |
 | `user_status` | `ACTIVE`, `INACTIVE` |
 | `session_status` | `CREATED`, `AUDIO_UPLOADING`, `AUDIO_UPLOADED`, `ANALYSIS_REQUESTED`, `ANALYSIS_PROCESSING`, `ANALYSIS_COMPLETED`, `REPORT_READY`, `FAILED`, `DELETED` |
 | `audio_file_status` | `PENDING_UPLOAD`, `UPLOADED`, `FAILED`, `EXPIRED`, `DELETED` |
 | `analysis_job_status` | `PENDING`, `DOWNLOADING`, `PREPROCESSING`, `RUNNING_VAD`, `RUNNING_DIARIZATION`, `RUNNING_ASR`, `ALIGNING`, `CALCULATING_METRICS`, `RUNNING_RAG`, `GENERATING_REPORT`, `SAVING_RESULT`, `COMPLETED`, `FAILED`, `RETRYING`, `CANCELLED` |
-| `target_speaker` | `CHILD`, `THERAPIST`, `ALL` |
-| `speaker_role` | `CHILD`, `THERAPIST`, `GUARDIAN`, `UNKNOWN` |
+| `target_speaker` | `PATIENT`, `SLP`, `ALL` |
+| `speaker_role` | `PATIENT`, `SLP`, `GUARDIAN`, `UNKNOWN` |
 | `transcript_status` | `DRAFT`, `EDITING`, `REVIEWED`, `FINALIZED` |
 | `template_type` | `SOAP_NOTE`, `CUSTOM` |
 | `template_status` | `ACTIVE`, `DELETED` |

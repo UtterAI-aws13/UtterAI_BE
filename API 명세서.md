@@ -4,7 +4,7 @@
 
 ## 기준
 
-- 도메인 명칭은 `patients` 대신 `children`을 사용한다.
+- 도메인 명칭은 `children` 대신 `patients`를 사용한다.
 - URL과 권한 규칙은 현재 구현된 FastAPI 코드와 아키텍처 문서를 기준으로 맞춘다.
 - 아직 미구현인 API도 이후 작업 범위를 명확히 하기 위해 함께 적어둔다.
 
@@ -29,7 +29,7 @@
 
 ---
 
-## 2. Users / Therapists
+## 2. Users / SLPs
 
 현재 사용자 관리 API는 구현 전이다. 문서상 `therapists`라는 이름을 쓰고 있었지만 실제 구현에서는 `users` 또는 `admin user management`로 재정리할 가능성이 높다.
 
@@ -43,27 +43,27 @@
 
 ---
 
-## 3. Children
+## 3. Patients
 
-`patients` 대신 `children` 도메인으로 정리한다.
+`children` 대신 `patients` 도메인으로 정리한다.
 
 ### 구현 완료
 
 | 상태 | 기능 | 사용자 | Method | URL | Query Param | Request Body | 설명 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 구현됨 | 아동 목록 조회 | 치료사, 관리자 | GET | `/api/v1/children` | - | - | 치료사는 본인 소유 아동만, 관리자는 전체 조회 |
-| 구현됨 | 아동 상세 조회 | 치료사, 관리자 | GET | `/api/v1/children/{childId}` | - | - | 아동 기본 정보 조회 |
-| 구현됨 | 아동 등록 | 치료사, 관리자 | POST | `/api/v1/children` | - | `name`, `birth_date`, `gender`, `memo`, `therapist_id(optional, admin only)` | 아동 정보 등록 |
-| 구현됨 | 아동 정보 수정 | 치료사, 관리자 | PATCH | `/api/v1/children/{childId}` | - | `name`, `birth_date`, `gender`, `memo` | 아동 정보 수정 |
-| 구현됨 | 아동 삭제 | 치료사, 관리자 | DELETE | `/api/v1/children/{childId}` | - | - | soft delete 처리 |
+| 구현됨 | 환자 목록 조회 | SLP, 관리자 | GET | `/api/v1/patients` | - | - | SLP는 본인 소유 환자만, 관리자는 전체 조회 |
+| 구현됨 | 환자 상세 조회 | SLP, 관리자 | GET | `/api/v1/patients/{patientId}` | - | - | 환자 기본 정보 조회 |
+| 구현됨 | 환자 등록 | SLP, 관리자 | POST | `/api/v1/patients` | - | `name`, `birth_date`, `gender`, `memo`, `slp_id(optional, admin only)` | 환자 정보 등록 |
+| 구현됨 | 환자 정보 수정 | SLP, 관리자 | PATCH | `/api/v1/patients/{patientId}` | - | `name`, `birth_date`, `gender`, `memo` | 환자 정보 수정 |
+| 구현됨 | 환자 삭제 | SLP, 관리자 | DELETE | `/api/v1/patients/{patientId}` | - | - | soft delete 처리 |
 
 ### 후속 예정
 
 | 상태 | 기능 | 사용자 | Method | URL | Query Param | Request Body | 설명 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 미구현 | 보호자 공유 권한 조회 | 치료사, 관리자 | GET | `/api/v1/children/{childId}/access-grants` | - | - | 아동 공유 권한 목록 조회 |
-| 미구현 | 보호자 공유 권한 생성 | 치료사, 관리자 | POST | `/api/v1/children/{childId}/access-grants` | - | `granteeUserId`, `accessLevel`, `expiresAt(optional)` | 보호자/조회 사용자 공유 권한 생성 |
-| 미구현 | 보호자 공유 권한 해제 | 치료사, 관리자 | DELETE | `/api/v1/children/{childId}/access-grants/{grantId}` | - | - | 공유 권한 해제 |
+| 미구현 | 보호자 공유 권한 조회 | SLP, 관리자 | GET | `/api/v1/patients/{patientId}/access-grants` | - | - | 환자 공유 권한 목록 조회 |
+| 미구현 | 보호자 공유 권한 생성 | SLP, 관리자 | POST | `/api/v1/patients/{patientId}/access-grants` | - | `granteeUserId`, `accessLevel`, `expiresAt(optional)` | 보호자/조회 사용자 공유 권한 생성 |
+| 미구현 | 보호자 공유 권한 해제 | SLP, 관리자 | DELETE | `/api/v1/patients/{patientId}/access-grants/{grantId}` | - | - | 공유 권한 해제 |
 
 ---
 
@@ -75,19 +75,19 @@
 
 | 상태 | 기능 | 사용자 | Method | URL | Query Param | Request Body | 설명 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 구현됨 | 세션 생성 | 치료사, 관리자 | POST | `/api/v1/sessions` | - | `child_id`, `session_date`, `session_type`, `memo` | 특정 아동에 연결된 세션 생성 |
-| 구현됨 | 세션 목록 조회 | 치료사, 관리자 | GET | `/api/v1/sessions` | `child_id(optional)` | - | 치료사는 본인 세션만, 관리자는 전체 조회 |
-| 구현됨 | 세션 상세 조회 | 치료사, 관리자 | GET | `/api/v1/sessions/{sessionId}` | - | - | 특정 세션 상세 조회 |
-| 구현됨 | 세션 수정 | 치료사, 관리자 | PATCH | `/api/v1/sessions/{sessionId}` | - | `session_date`, `session_type`, `memo`, `status` | 세션 정보 수정 |
-| 구현됨 | 세션 삭제 | 치료사, 관리자 | DELETE | `/api/v1/sessions/{sessionId}` | - | - | soft delete 처리 |
+| 구현됨 | 세션 생성 | SLP, 관리자 | POST | `/api/v1/sessions` | - | `patient_ref_id`, `session_date`, `session_type`, `memo` | 특정 환자에 연결된 세션 생성 |
+| 구현됨 | 세션 목록 조회 | SLP, 관리자 | GET | `/api/v1/sessions` | `patient_ref_id(optional)` | - | SLP는 본인 세션만, 관리자는 전체 조회 |
+| 구현됨 | 세션 상세 조회 | SLP, 관리자 | GET | `/api/v1/sessions/{sessionId}` | - | - | 특정 세션 상세 조회 |
+| 구현됨 | 세션 수정 | SLP, 관리자 | PATCH | `/api/v1/sessions/{sessionId}` | - | `session_date`, `session_type`, `memo`, `status` | 세션 정보 수정 |
+| 구현됨 | 세션 삭제 | SLP, 관리자 | DELETE | `/api/v1/sessions/{sessionId}` | - | - | soft delete 처리 |
 
 ### 후속 예정
 
 | 상태 | 기능 | 사용자 | Method | URL | Query Param | Request Body | 설명 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 미구현 | 세션 요약 조회 | 치료사, 관리자 | GET | `/api/v1/sessions/{sessionId}/summary` | - | - | 업로드 상태, 분석 상태, 결과 요약 조회 |
-| 구현됨 | 세션별 리포트 목록 | 치료사, 관리자 | GET | `/api/v1/sessions/{sessionId}/reports` | - | - | 세션에 연결된 리포트 목록 조회 |
-| 미구현 | 세션별 분석 결과 조회 | 치료사, 관리자, 공유 사용자 | GET | `/api/v1/sessions/{sessionId}/analysis-results` | - | - | 세션에 연결된 분석 결과 조회 |
+| 미구현 | 세션 요약 조회 | SLP, 관리자 | GET | `/api/v1/sessions/{sessionId}/summary` | - | - | 업로드 상태, 분석 상태, 결과 요약 조회 |
+| 구현됨 | 세션별 리포트 목록 | SLP, 관리자 | GET | `/api/v1/sessions/{sessionId}/reports` | - | - | 세션에 연결된 리포트 목록 조회 |
+| 미구현 | 세션별 분석 결과 조회 | SLP, 관리자, 공유 사용자 | GET | `/api/v1/sessions/{sessionId}/analysis-results` | - | - | 세션에 연결된 분석 결과 조회 |
 
 ---
 
@@ -95,10 +95,10 @@
 
 | 상태 | 기능 | 사용자 | Method | URL | Query Param | Request Body | 설명 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 구현됨 | 음성 업로드 URL 발급 | 치료사, 관리자 | POST | `/api/v1/audio-files/presigned-url` | - | `file_name`, `content_type`, `session_id`, `file_size(optional)` | pending audio row 생성 후 S3 업로드용 presigned URL 발급 |
-| 구현됨 | 음성 파일 등록 | 치료사, 관리자 | POST | `/api/v1/audio-files` | - | `session_id`, `s3_key`, `duration_seconds(optional)` | 업로드 완료된 음성 메타데이터 확정 |
-| 구현됨 | 음성 파일 조회 | 치료사, 관리자 | GET | `/api/v1/audio-files/{audioFileId}` | - | - | 음성 파일 메타데이터 조회 |
-| 구현됨 | 음성 파일 삭제 | 치료사, 관리자 | DELETE | `/api/v1/audio-files/{audioFileId}` | - | - | 음성 파일 soft delete |
+| 구현됨 | 음성 업로드 URL 발급 | SLP, 관리자 | POST | `/api/v1/audio-files/presigned-url` | - | `file_name`, `content_type`, `session_id`, `file_size(optional)` | pending audio row 생성 후 S3 업로드용 presigned URL 발급 |
+| 구현됨 | 음성 파일 등록 | SLP, 관리자 | POST | `/api/v1/audio-files` | - | `session_id`, `s3_key`, `duration_seconds(optional)` | 업로드 완료된 음성 메타데이터 확정 |
+| 구현됨 | 음성 파일 조회 | SLP, 관리자 | GET | `/api/v1/audio-files/{audioFileId}` | - | - | 음성 파일 메타데이터 조회 |
+| 구현됨 | 음성 파일 삭제 | SLP, 관리자 | DELETE | `/api/v1/audio-files/{audioFileId}` | - | - | 음성 파일 soft delete |
 
 ### 구현 메모
 
@@ -112,10 +112,10 @@
 
 | 상태 | 기능 | 사용자 | Method | URL | Query Param | Request Body | 설명 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 구현됨 | AI 분석 요청 | 치료사, 관리자 | POST | `/api/v1/analysis-jobs` | - | `session_id`, `audio_file_id`, `analysis_template(optional)` | AI 분석 작업 생성 |
-| 구현됨 | 분석 작업 목록 | 치료사, 관리자 | GET | `/api/v1/analysis-jobs` | `session_id(optional)`, `status(optional)` | - | 분석 작업 목록 조회 |
-| 구현됨 | 분석 작업 상태 조회 | 치료사, 관리자 | GET | `/api/v1/analysis-jobs/{jobId}` | - | - | 분석 진행 상태 조회 |
-| 구현됨 | 분석 작업 취소 | 치료사, 관리자 | PATCH | `/api/v1/analysis-jobs/{jobId}/cancel` | - | - | active 분석 작업 취소 |
+| 구현됨 | AI 분석 요청 | SLP, 관리자 | POST | `/api/v1/analysis-jobs` | - | `session_id`, `audio_file_id`, `analysis_template(optional)` | AI 분석 작업 생성 |
+| 구현됨 | 분석 작업 목록 | SLP, 관리자 | GET | `/api/v1/analysis-jobs` | `session_id(optional)`, `status(optional)` | - | 분석 작업 목록 조회 |
+| 구현됨 | 분석 작업 상태 조회 | SLP, 관리자 | GET | `/api/v1/analysis-jobs/{jobId}` | - | - | 분석 진행 상태 조회 |
+| 구현됨 | 분석 작업 취소 | SLP, 관리자 | PATCH | `/api/v1/analysis-jobs/{jobId}/cancel` | - | - | active 분석 작업 취소 |
 | 구현됨 | 내부 진행률 Callback | 내부 AI 시스템 | POST | `/api/v1/internal/analysis-jobs/{jobId}/progress` | - | `status`, `progress`, `current_stage` | 진행 상태 업데이트 |
 | 미구현 | 내부 결과 Callback | 내부 AI 시스템 | POST | `/api/v1/internal/analysis-results/callback` | - | 결과 payload | 분석 결과 수신 |
 
@@ -133,13 +133,13 @@
 | 상태 | 기능 | 사용자 | Method | URL | Query Param | Request Body | 설명 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 구현됨 | 내부 분석 결과 Callback | 내부 AI 시스템 | POST | `/api/v1/internal/analysis-results/callback` | - | 결과 payload | 분석 결과와 transcript/speaker/utterance 저장 |
-| 구현됨 | 전사 결과 조회 | 치료사, 관리자 | GET | `/api/v1/transcripts/{resultId}` | - | - | analysis result 기준 전사 결과 조회 |
-| 구현됨 | 세션 전사 결과 조회 | 치료사, 관리자 | GET | `/api/v1/sessions/{sessionId}/transcript` | - | - | 특정 세션의 전사 결과 조회 |
-| 구현됨 | 전사 문장 수정 | 치료사, 관리자 | PATCH | `/api/v1/transcripts/{resultId}/segments/{segmentId}` | - | `text`, `speaker_role`, `edit_reason(optional)` | 특정 발화 구간 수정 |
-| 구현됨 | 전사 결과 일괄 수정 | 치료사, 관리자 | PATCH | `/api/v1/transcripts/{resultId}/segments` | - | `segments` | 여러 발화 구간 일괄 수정 |
-| 구현됨 | 전사 구간 추가 | 치료사, 관리자 | POST | `/api/v1/transcripts/{resultId}/segments` | - | `speaker_label`, `speaker_role(optional)`, `start_time`, `end_time`, `text`, `edit_reason(optional)` | 누락된 구간 추가 |
-| 구현됨 | 전사 구간 삭제 | 치료사, 관리자 | DELETE | `/api/v1/transcripts/{resultId}/segments/{segmentId}` | - | - | 잘못 생성된 구간 삭제 |
-| 구현됨 | 전사 결과 확정 | 치료사, 관리자 | PATCH | `/api/v1/transcripts/{resultId}/confirm` | - | - | 수정 완료 전사본 확정 |
+| 구현됨 | 전사 결과 조회 | SLP, 관리자 | GET | `/api/v1/transcripts/{resultId}` | - | - | analysis result 기준 전사 결과 조회 |
+| 구현됨 | 세션 전사 결과 조회 | SLP, 관리자 | GET | `/api/v1/sessions/{sessionId}/transcript` | - | - | 특정 세션의 전사 결과 조회 |
+| 구현됨 | 전사 문장 수정 | SLP, 관리자 | PATCH | `/api/v1/transcripts/{resultId}/segments/{segmentId}` | - | `text`, `speaker_role`, `edit_reason(optional)` | 특정 발화 구간 수정 |
+| 구현됨 | 전사 결과 일괄 수정 | SLP, 관리자 | PATCH | `/api/v1/transcripts/{resultId}/segments` | - | `segments` | 여러 발화 구간 일괄 수정 |
+| 구현됨 | 전사 구간 추가 | SLP, 관리자 | POST | `/api/v1/transcripts/{resultId}/segments` | - | `speaker_label`, `speaker_role(optional)`, `start_time`, `end_time`, `text`, `edit_reason(optional)` | 누락된 구간 추가 |
+| 구현됨 | 전사 구간 삭제 | SLP, 관리자 | DELETE | `/api/v1/transcripts/{resultId}/segments/{segmentId}` | - | - | 잘못 생성된 구간 삭제 |
+| 구현됨 | 전사 결과 확정 | SLP, 관리자 | PATCH | `/api/v1/transcripts/{resultId}/confirm` | - | - | 수정 완료 전사본 확정 |
 
 ### 구현 메모
 
@@ -153,11 +153,11 @@
 
 | 상태 | 기능 | 사용자 | Method | URL | Query Param | Request Body | 설명 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 구현됨 | 분석 결과 조회 | 치료사, 관리자 | GET | `/api/v1/analysis-results/{resultId}` | - | - | 전체 분석 결과 조회 |
-| 구현됨 | 세션별 분석 결과 조회 | 치료사, 관리자 | GET | `/api/v1/sessions/{sessionId}/analysis-results` | - | - | 세션별 분석 결과 조회 |
-| 구현됨 | 전사 결과 조회 | 치료사, 관리자 | GET | `/api/v1/analysis-results/{resultId}/transcripts` | - | - | analysis result 네임스페이스에서 STT 전사 결과를 조회한다. |
-| 구현됨 | 화자 분리 결과 조회 | 치료사, 관리자 | GET | `/api/v1/analysis-results/{resultId}/speakers` | - | - | 화자 라벨, 역할, 발화 수를 조회한다. |
-| 구현됨 | 언어 지표 조회 | 치료사, 관리자 | GET | `/api/v1/analysis-results/{resultId}/metrics` | - | - | 저장된 metrics payload 조회 |
+| 구현됨 | 분석 결과 조회 | SLP, 관리자 | GET | `/api/v1/analysis-results/{resultId}` | - | - | 전체 분석 결과 조회 |
+| 구현됨 | 세션별 분석 결과 조회 | SLP, 관리자 | GET | `/api/v1/sessions/{sessionId}/analysis-results` | - | - | 세션별 분석 결과 조회 |
+| 구현됨 | 전사 결과 조회 | SLP, 관리자 | GET | `/api/v1/analysis-results/{resultId}/transcripts` | - | - | analysis result 네임스페이스에서 STT 전사 결과를 조회한다. |
+| 구현됨 | 화자 분리 결과 조회 | SLP, 관리자 | GET | `/api/v1/analysis-results/{resultId}/speakers` | - | - | 화자 라벨, 역할, 발화 수를 조회한다. |
+| 구현됨 | 언어 지표 조회 | SLP, 관리자 | GET | `/api/v1/analysis-results/{resultId}/metrics` | - | - | 저장된 metrics payload 조회 |
 
 ---
 
@@ -165,13 +165,13 @@
 
 | 상태 | 기능 | 사용자 | Method | URL | Query Param | Request Body | 설명 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 구현됨 | SOAP Note 초안 생성 | 치료사, 관리자 | POST | `/api/v1/soap-notes/generate` | - | `sessionId`, `transcriptId`, `clinicalAnalysisJobId(optional)` | 분석 결과 기반 초안 생성 |
-| 구현됨 | SOAP Note 목록 조회 | 치료사, 관리자 | GET | `/api/v1/soap-notes` | `sessionId(optional)`, `childId(optional)` | - | SOAP Note 목록 조회 |
-| 구현됨 | SOAP Note 상세 조회 | 치료사, 관리자 | GET | `/api/v1/soap-notes/{noteId}` | - | - | SOAP Note 상세 조회 |
-| 구현됨 | SOAP Note 수정 | 치료사, 관리자 | PATCH | `/api/v1/soap-notes/{noteId}` | - | `subjective`, `objective`, `assessment`, `plan` | mutable SOAP Note 수정 |
-| 구현됨 | SOAP Note 저장 | 치료사, 관리자 | PATCH | `/api/v1/soap-notes/{noteId}/save` | - | - | 수정본 저장 |
-| 구현됨 | SOAP Note 확정 | 치료사, 관리자 | PATCH | `/api/v1/soap-notes/{noteId}/finalize` | - | - | 최종 확정 |
-| 구현됨 | SOAP Note 삭제 | 치료사, 관리자 | DELETE | `/api/v1/soap-notes/{noteId}` | - | - | SOAP Note soft delete |
+| 구현됨 | SOAP Note 초안 생성 | SLP, 관리자 | POST | `/api/v1/soap-notes/generate` | - | `sessionId`, `transcriptId`, `clinicalAnalysisJobId(optional)` | 분석 결과 기반 초안 생성 |
+| 구현됨 | SOAP Note 목록 조회 | SLP, 관리자 | GET | `/api/v1/soap-notes` | `sessionId(optional)`, `patientId(optional)` | - | SOAP Note 목록 조회 |
+| 구현됨 | SOAP Note 상세 조회 | SLP, 관리자 | GET | `/api/v1/soap-notes/{noteId}` | - | - | SOAP Note 상세 조회 |
+| 구현됨 | SOAP Note 수정 | SLP, 관리자 | PATCH | `/api/v1/soap-notes/{noteId}` | - | `subjective`, `objective`, `assessment`, `plan` | mutable SOAP Note 수정 |
+| 구현됨 | SOAP Note 저장 | SLP, 관리자 | PATCH | `/api/v1/soap-notes/{noteId}/save` | - | - | 수정본 저장 |
+| 구현됨 | SOAP Note 확정 | SLP, 관리자 | PATCH | `/api/v1/soap-notes/{noteId}/finalize` | - | - | 최종 확정 |
+| 구현됨 | SOAP Note 삭제 | SLP, 관리자 | DELETE | `/api/v1/soap-notes/{noteId}` | - | - | SOAP Note soft delete |
 
 ### 구현 메모
 
@@ -185,11 +185,11 @@
 
 | 상태 | 기능 | 사용자 | Method | URL | Query Param | Request Body | 설명 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 구현됨 | 리포트 생성 | 치료사, 관리자 | POST | `/api/v1/reports` | - | `sessionId`, `resultId`, `templateType` | finalized SOAP Note와 분석 결과를 기준으로 리포트를 생성한다. |
-| 구현됨 | 리포트 목록 조회 | 치료사, 관리자 | GET | `/api/v1/reports` | `childId(optional)` | - | 현재 사용자에게 보이는 리포트 목록을 조회한다. |
-| 구현됨 | 리포트 상세 조회 | 치료사, 관리자 | GET | `/api/v1/reports/{reportId}` | - | - | 리포트 본문과 메타데이터를 조회한다. |
-| 구현됨 | 리포트 수정 | 치료사, 관리자 | PATCH | `/api/v1/reports/{reportId}` | - | `title`, `content`, `memo` | 생성된 리포트의 제목, 본문, 메모를 수동 수정한다. |
-| 구현됨 | 리포트 다운로드 | 치료사, 관리자 | GET | `/api/v1/reports/{reportId}/download` | - | - | MVP에서는 텍스트 첨부파일 다운로드를 제공하고 PDF 렌더링은 후속 작업으로 남긴다. |
+| 구현됨 | 리포트 생성 | SLP, 관리자 | POST | `/api/v1/reports` | - | `sessionId`, `resultId`, `templateType` | finalized SOAP Note와 분석 결과를 기준으로 리포트를 생성한다. |
+| 구현됨 | 리포트 목록 조회 | SLP, 관리자 | GET | `/api/v1/reports` | `patientId(optional)` | - | 현재 사용자에게 보이는 리포트 목록을 조회한다. |
+| 구현됨 | 리포트 상세 조회 | SLP, 관리자 | GET | `/api/v1/reports/{reportId}` | - | - | 리포트 본문과 메타데이터를 조회한다. |
+| 구현됨 | 리포트 수정 | SLP, 관리자 | PATCH | `/api/v1/reports/{reportId}` | - | `title`, `content`, `memo` | 생성된 리포트의 제목, 본문, 메모를 수동 수정한다. |
+| 구현됨 | 리포트 다운로드 | SLP, 관리자 | GET | `/api/v1/reports/{reportId}/download` | - | - | MVP에서는 텍스트 첨부파일 다운로드를 제공하고 PDF 렌더링은 후속 작업으로 남긴다. |
 
 ### 구현 메모
 
