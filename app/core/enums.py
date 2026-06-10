@@ -6,7 +6,6 @@ from enum import StrEnum
 class UserRole(StrEnum):
     ADMIN = "ADMIN"
     SLP = "SLP"
-    VIEWER = "VIEWER"
 
 
 class UserStatus(StrEnum):

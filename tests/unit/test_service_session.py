@@ -109,12 +109,6 @@ class TestSessionServiceList:
             patient_ref_id=None,
         )
 
-    def test_viewer_raises_403(self, service):
-        user = _make_user(UserRole.VIEWER)
-        with pytest.raises(HTTPException) as exc:
-            service.list(user)
-        assert exc.value.status_code == 403
-
 
 class TestSessionServiceGet:
     def test_admin_can_access_any_session(self, service):

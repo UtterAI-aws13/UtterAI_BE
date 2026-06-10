@@ -2,7 +2,7 @@
 
 > **기준**: `entities.py` 기반 (`app/models/entities.py`)  
 > **DB**: PostgreSQL (RDS) — BE 전용 (AI DB는 별도 `rag_chunks` 테이블)  
-> **마지막 마이그레이션**: `20260609_0010_redesign_full_schema`
+> **마지막 마이그레이션**: `20260610_0012_remove_viewer_from_user_role`
 
 ---
 
@@ -10,7 +10,7 @@
 
 | 테이블 | 설명 |
 |---|---|
-| `users` | 치료사/관리자/뷰어 계정 |
+| `users` | SLP/관리자 계정 |
 | `refresh_tokens` | JWT refresh token 저장 |
 | `patient_refs` | 온프레미스 환자 DB와의 연결 참조 키 |
 | `sessions` | 치료 세션 |
@@ -19,7 +19,7 @@
 | `transcripts` | 분석 결과 스크립트 헤더 |
 | `transcript_segments` | 스크립트 발화 단위 |
 | `language_metrics` | 언어 지표 (MLU, TTR, NTW, NDW 등) |
-| `templates` | SOAP Note 입력 템플릿 |
+| `templates` | SLP가 업로드한 리포트 템플릿 파일 |
 | `reports` | AI 생성 리포트 헤더 |
 | `report_segments` | 리포트 SOAP 섹션 단위 |
 | `approval_history` | 리포트 승인/반려 이력 |
@@ -36,7 +36,7 @@
 | `email` | VARCHAR(255) | UNIQUE, NOT NULL | 로그인 이메일 |
 | `password_hash` | TEXT | NOT NULL | bcrypt 해시 |
 | `name` | VARCHAR(100) | NOT NULL | 표시 이름 |
-| `role` | ENUM(user_role) | NOT NULL | `ADMIN`, `SLP`, `VIEWER` |
+| `role` | ENUM(user_role) | NOT NULL | `ADMIN`, `SLP` |
 | `status` | ENUM(user_status) | NOT NULL, default `ACTIVE` | `ACTIVE`, `INACTIVE` |
 | `created_at` | TIMESTAMPTZ | NOT NULL, server_default | |
 | `updated_at` | TIMESTAMPTZ | NOT NULL, server_default | |
@@ -204,21 +204,25 @@ PENDING → DOWNLOADING → PREPROCESSING
 
 ### `templates`
 
+> SLP가 직접 업로드한 리포트 템플릿 파일. 분석 요청 시 AI에 함께 전달되어 리포트 생성 형식을 지정한다.
+
 | 컬럼 | 타입 | 제약 | 설명 |
 |---|---|---|---|
 | `id` | UUID | PK | |
-| `owner_id` | UUID | FK → users(id) ON DELETE RESTRICT, nullable | null = 시스템 템플릿 |
-| `name` | VARCHAR(255) | NOT NULL | |
-| `description` | TEXT | nullable | |
+| `owner_id` | UUID | FK → users(id) ON DELETE RESTRICT, nullable | null = 시스템 기본 템플릿 |
+| `name` | VARCHAR(255) | NOT NULL | 템플릿 표시 이름 |
+| `description` | TEXT | nullable | 템플릿 설명 |
 | `template_type` | ENUM(template_type) | NOT NULL | `SOAP_NOTE`, `CUSTOM` |
-| `sections_json` | JSONB | nullable | 섹션 구조 정의 JSON |
-| `file_s3_key` | TEXT | nullable | 업로드 파일 S3 키 |
-| `file_original_name` | VARCHAR(500) | nullable | 원본 파일명 |
-| `is_system` | BOOLEAN | NOT NULL, default false | 시스템 제공 템플릿 여부 |
+| `sections_json` | JSONB | nullable | 섹션 구조 정의 (파일 없이 구조만 지정할 경우) |
+| `file_s3_key` | TEXT | nullable | 업로드된 템플릿 파일 S3 키 |
+| `file_original_name` | VARCHAR(500) | nullable | 업로드 원본 파일명 |
+| `is_system` | BOOLEAN | NOT NULL, default false | 시스템 기본 제공 여부 (SLP 소유 아님) |
 | `use_count` | INTEGER | NOT NULL, default 0 | 분석 요청에 사용된 횟수 |
 | `status` | ENUM(template_status) | NOT NULL, default `ACTIVE` | `ACTIVE`, `DELETED` |
 | `created_at` | TIMESTAMPTZ | NOT NULL, server_default | |
 | `updated_at` | TIMESTAMPTZ | NOT NULL, server_default | |
+
+**사용 흐름**: SLP가 파일 업로드 → S3 저장 후 `file_s3_key` 기록 → 분석 요청 시 `template_id` 지정 → AI 서버가 해당 파일을 참조해 리포트 생성
 
 ---
 
@@ -296,7 +300,7 @@ AI 서버 전용 DB. BE RDS와 분리된 PostgreSQL + pgvector.
 
 | Enum | 값 |
 |---|---|
-| `user_role` | `ADMIN`, `SLP`, `VIEWER` |
+| `user_role` | `ADMIN`, `SLP` |
 | `user_status` | `ACTIVE`, `INACTIVE` |
 | `session_status` | `CREATED`, `AUDIO_UPLOADING`, `AUDIO_UPLOADED`, `ANALYSIS_REQUESTED`, `ANALYSIS_PROCESSING`, `ANALYSIS_COMPLETED`, `REPORT_READY`, `FAILED`, `DELETED` |
 | `audio_file_status` | `PENDING_UPLOAD`, `UPLOADED`, `FAILED`, `EXPIRED`, `DELETED` |
@@ -318,8 +322,11 @@ AI 서버 전용 DB. BE RDS와 분리된 PostgreSQL + pgvector.
 |---|---|---|
 | `patient_refs` 분리 | 온프레미스 환자 DB와 클라우드 분리 | 실제 환자 정보는 온프레미스에만 보관 |
 | `s3_bucket` 제거 | `object_key`만 저장, bucket은 config에서 관리 | 버킷은 환경별 설정값, DB에 중복 보관 불필요 |
-| `report_segments` 분리 | SOAP 섹션별 편집 가능하게 | 섹션 단위 AI 원본 보존 + 치료사 편집 이력 추적 |
+| `report_segments` 분리 | SOAP 섹션별 편집 가능하게 | 섹션 단위 AI 원본 보존 + SLP 편집 이력 추적 |
 | `language_metrics` 별도 테이블 | AI worker 기록, report 생성 시 읽음 | SOAP Objective 섹션 데이터 소스 |
 | `organizations` 제거 | 단일 기관 운영 | 불필요한 복잡도 제거 |
 | `audit_log` 제거 | 즉시 사용 계획 없음 | 필요 시 추후 추가 |
 | `model_used` VARCHAR | Bedrock 모델 ID 하나만 저장 | 파이프라인 전체 모델 버전은 AI 서버 책임 |
+| `templates` 파일 업로드 방식 | SLP가 직접 파일 업로드, AI가 참조 | 구조화된 JSON 대신 SLP 소유 파일로 리포트 형식 지정 |
+| `VIEWER` 역할 제거 | 사용자 역할을 ADMIN/SLP만 유지 | 보호자는 앱에 직접 접근하지 않음 |
+| `patient_access_grants` 미구현 | 보호자 공유 권한 테이블 없음 | 보호자 공유는 리포트 파일 전달 또는 공유 링크로 처리 |

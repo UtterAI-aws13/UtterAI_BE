@@ -156,9 +156,7 @@ Auth 도메인은 사용자의 로그인, 토큰 발급, 권한 검사를 담당
 | 역할 | 설명 |
 |---|---|
 | `ADMIN` | 전체 시스템 관리자 |
-| `SLP` | 치료사 |
-| `GUARDIAN` | 보호자 |
-| `VIEWER` | 제한된 조회 사용자 |
+| `SLP` | 언어재활사 |
 
 ### 동작 흐름
 
@@ -532,7 +530,7 @@ Report 도메인은 분석 결과를 사용자에게 보여주거나 다운로�
 | 리포트 상세 조회 | 리포트 요약 데이터 조회 |
 | 리포트 다운로드 URL 발급 | S3 Presigned Download URL 발급 |
 | 리포트 재생성 요청 | 수정된 발화 기준으로 AI 서버에 재생성 요청 |
-| 리포트 공개 상태 변경 | 보호자 공유 여부 설정 |
+| 리포트 공유 링크 생성 | 보호자 등 외부에 공유할 링크 발급 |
 
 ### 다운로드 흐름
 
@@ -1295,36 +1293,7 @@ CREATE TABLE feedbacks (
 
 ---
 
-## 7.12 patient_access_grants
-
-보호자 공유 권한은 환자 단위로 관리하고, 세션/결과/리포트 접근 권한은 환자 공유 권한에서 파생시키는 것을 기본으로 한다.
-
-```sql
-CREATE TABLE patient_access_grants (
-    id UUID PRIMARY KEY,
-    patient_ref_id UUID NOT NULL REFERENCES patient_refs(id),
-    grantee_user_id UUID NOT NULL REFERENCES users(id),
-    granted_by_user_id UUID NOT NULL REFERENCES users(id),
-    access_level VARCHAR(50) NOT NULL,
-    status VARCHAR(50) NOT NULL DEFAULT 'ACTIVE',
-    expires_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL,
-    updated_at TIMESTAMPTZ NOT NULL,
-    revoked_at TIMESTAMPTZ,
-    UNIQUE (patient_ref_id, grantee_user_id)
-);
-```
-
-`access_level`은 MVP에서 다음 두 단계만 두는 것이 안전하다.
-
-| access_level | 설명 |
-|---|---|
-| `VIEW_RESULT` | 결과/리포트/세션 조회만 가능 |
-| `VIEW_AND_DOWNLOAD` | 조회 + 리포트 다운로드 가능 |
-
----
-
-## 7.13 utterance_edit_history
+## 7.12 utterance_edit_history
 
 발화 수정은 `utterances` 테이블에 최신본을 유지하고, 별도 이력 테이블에 변경 내역을 append-only로 저장하는 방식을 권장한다.
 
@@ -1645,11 +1614,11 @@ X-Signature: sha256={hmac_signature}
 | 리소스 | 접근 가능한 사용자 |
 |---|---|
 | 내 프로필 | 본인 |
-| 아동 프로필 | 담당 치료사, 관리자 |
-| 세션 | 담당 치료사, 관리자, 공유받은 보호자 |
-| 음성 파일 | 담당 치료사, 관리자 |
-| 분석 결과 | 담당 치료사, 관리자, 공유받은 보호자 |
-| 리포트 | 담당 치료사, 관리자, 공유받은 보호자 |
+| 환자 정보 | 담당 SLP, 관리자 |
+| 세션 | 담당 SLP, 관리자 |
+| 음성 파일 | 담당 SLP, 관리자 |
+| 분석 결과 | 담당 SLP, 관리자 |
+| 리포트 | 담당 SLP, 관리자 (보호자에게는 파일/링크 공유) |
 | 관리자 API | 관리자만 가능 |
 
 ---
@@ -1661,43 +1630,28 @@ X-Signature: sha256={hmac_signature}
 ```text
 1. JWT에서 user_id 추출
 2. session_id로 세션 조회
-3. 세션의 therapist_id와 user_id 비교
+3. 세션의 slp_id와 user_id 비교
 4. 같으면 접근 허용
 5. 관리자라면 접근 허용
-6. 공유 권한이 있으면 접근 허용
-7. 아니면 403 Forbidden 반환
+6. 아니면 403 Forbidden 반환
 ```
 
 ---
 
-### 11.3 공유 권한 모델
+### 11.3 보호자 리포트 공유 방식
 
-공유는 `세션 단위`가 아니라 `아동 단위`를 기본으로 한다.
+보호자는 앱에 직접 로그인하지 않는다. 리포트 공유는 다음 방식 중 하나로 처리한다.
 
-이유는 다음과 같다.
-
-- 보호자는 특정 아동의 여러 세션을 연속적으로 봐야 한다.
-- 세션별로 권한을 따로 주면 운영 복잡도가 불필요하게 커진다.
-- 세션, 결과, 리포트 권한을 하나의 기준으로 묶기 쉽다.
-
-공유 규칙은 다음과 같이 정의한다.
-
-```text
-1. 공유 생성 주체는 담당 치료사 또는 관리자
-2. 공유 대상은 GUARDIAN 또는 VIEWER 역할 사용자
-3. 공유 기준은 patient_ref_id
-4. 공유가 ACTIVE이면 해당 patient의 session/result/report 조회 가능
-5. download는 access_level이 VIEW_AND_DOWNLOAD일 때만 허용
-6. revoke 또는 expires_at 경과 시 즉시 접근 차단
-7. audio 원본 다운로드는 공유 대상에게 기본적으로 허용하지 않음
-```
+| 방식 | 설명 |
+|---|---|
+| 파일 전달 | SLP가 리포트를 다운로드해 보호자에게 직접 전달 |
+| 공유 링크 생성 | SLP가 리포트 공유 링크를 생성하고 보호자에게 전달 |
 
 권한 판단 우선순위는 다음과 같다.
 
 ```text
 ADMIN
 -> 세션 담당 SLP
--> ACTIVE patient_access_grants 보유 사용자
 -> 그 외 거부
 ```
 
@@ -1715,7 +1669,6 @@ soft delete 대상은 다음과 같다.
 | patient_refs | `status=DELETED` | 세션/결과 참조 보존 필요 |
 | sessions | `status=DELETED` | 분석/리포트 이력 보존 필요 |
 | audio_files | `status=DELETED` | 분석 재현성 추적 필요 |
-| child_access_grants | `status=REVOKED` | 권한 변경 감사 필요 |
 | reports | `status=DELETED` | 배포 이력과 재생성 이력 보존 |
 
 물리 삭제를 허용해도 되는 대상은 다음과 같다.
