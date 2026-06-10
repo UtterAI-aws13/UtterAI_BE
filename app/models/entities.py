@@ -11,6 +11,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.core.enums import (
     AnalysisJobStatus,
     AudioFileStatus,
+    PatientStatus,
     ReportSegmentType,
     ReportStatus,
     SessionStatus,
@@ -42,7 +43,7 @@ class User(TimestampMixin, Base):
 
 
 class PatientRef(Base):
-    """Cloud-side patient reference ID. Mapped to on-prem patient via cloud_patient_ref_id."""
+    """Cloud-to-on-prem patient reference pointer."""
 
     __tablename__ = "patient_refs"
 
@@ -52,6 +53,28 @@ class PatientRef(Base):
     )
     current_slp_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class Patient(Base):
+    """Cloud-side patient info. 1:1 with PatientRef."""
+
+    __tablename__ = "patients"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    patient_ref_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("patient_refs.id", ondelete="RESTRICT"), nullable=False, unique=True
+    )
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    birth_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    gender: Mapped[str | None] = mapped_column(String(1), nullable=True)
+    memo: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[PatientStatus] = mapped_column(
+        Enum(PatientStatus, name="patient_status"),
+        nullable=False,
+        default=PatientStatus.ACTIVE,
+        server_default=PatientStatus.ACTIVE.value,
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 

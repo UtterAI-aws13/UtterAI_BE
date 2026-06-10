@@ -13,6 +13,11 @@ class UserStatus(StrEnum):
     INACTIVE = "INACTIVE"
 
 
+class PatientStatus(StrEnum):
+    ACTIVE = "ACTIVE"
+    DELETED = "DELETED"
+
+
 class SessionStatus(StrEnum):
     CREATED = "CREATED"
     AUDIO_UPLOADING = "AUDIO_UPLOADING"

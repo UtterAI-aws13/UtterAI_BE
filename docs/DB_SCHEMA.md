@@ -2,7 +2,7 @@
 
 > **기준**: `entities.py` 기반 (`app/models/entities.py`)  
 > **DB**: PostgreSQL (RDS) — BE 전용 (AI DB는 별도 `rag_chunks` 테이블)  
-> **마지막 마이그레이션**: `ee74ebb16930_add_created_by_slp_id_and_current_slp_id_to_patient_refs`
+> **마지막 마이그레이션**: `20260610_0015_add_patient_info_fields` (patients 테이블 신설)
 
 ---
 
@@ -12,7 +12,8 @@
 |---|---|
 | `users` | SLP/관리자 계정 |
 | `refresh_tokens` | JWT refresh token 저장 |
-| `patient_refs` | 온프레미스 환자 DB와의 연결 참조 키 |
+| `patient_refs` | 온프레미스 환자 DB와의 연결 참조 키 (lean pointer) |
+| `patients` | 클라우드 측 환자 정보 (patient_refs 1:1 FK) |
 | `sessions` | 치료 세션 |
 | `audio_files` | 세션 음성 파일 메타데이터 (S3 presigned upload) |
 | `analysis_jobs` | AI 분석 파이프라인 작업 |
@@ -57,7 +58,7 @@
 
 ### `patient_refs`
 
-> 온프레미스 환자 DB와의 브릿지. 클라우드에서는 UUID만 보유하며, 실제 환자 정보는 온프레미스 DB에 있음.
+> 클라우드 ↔ 온프레미스 브릿지. SLP 귀속 정보만 보유. 실제 환자 프로필은 `patients` 테이블(클라우드) 또는 온프레미스 DB에 보관.
 
 | 컬럼 | 타입 | 제약 | 설명 |
 |---|---|---|---|
@@ -65,6 +66,23 @@
 | `created_by_slp_id` | UUID | FK → users(id) ON DELETE RESTRICT, NOT NULL | 최초 등록 SLP |
 | `current_slp_id` | UUID | FK → users(id) ON DELETE RESTRICT, NOT NULL | 현재 담당 SLP |
 | `created_at` | TIMESTAMPTZ | NOT NULL | 참조 생성 시점 |
+
+---
+
+### `patients`
+
+> 클라우드 측 환자 프로필. `patient_refs`와 1:1 관계. `sessions`는 `patient_refs.id`를 참조.
+
+| 컬럼 | 타입 | 제약 | 설명 |
+|---|---|---|---|
+| `id` | UUID | PK | |
+| `patient_ref_id` | UUID | FK → patient_refs(id) ON DELETE RESTRICT, UNIQUE, NOT NULL | 연결된 참조 키 |
+| `name` | VARCHAR(100) | NOT NULL | 환자 이름 |
+| `birth_date` | DATE | nullable | 생년월일 |
+| `gender` | VARCHAR(1) | nullable | `M`, `F`, `U` |
+| `memo` | TEXT | nullable | 치료사 메모 |
+| `status` | ENUM(patient_status) | NOT NULL, default `ACTIVE` | `ACTIVE`, `DELETED` |
+| `created_at` | TIMESTAMPTZ | NOT NULL | |
 
 ---
 
@@ -297,6 +315,7 @@ AI 서버 전용 DB. BE RDS와 분리된 PostgreSQL + pgvector.
 | `speaker_role` | `PATIENT`, `SLP`, `GUARDIAN`, `UNKNOWN` |
 | `transcript_status` | `DRAFT`, `EDITING`, `REVIEWED`, `FINALIZED` |
 | `template_type` | `SOAP_NOTE`, `CUSTOM` |
+| `patient_status` | `ACTIVE`, `DELETED` |
 | `template_status` | `ACTIVE`, `DELETED` |
 | `report_status` | `DRAFT`, `REVIEWING`, `APPROVED`, `FINALIZED`, `DELETED` |
 | `report_segment_type` | `SUBJECTIVE`, `OBJECTIVE`, `ASSESSMENT`, `PLAN`, `CUSTOM` |
@@ -307,7 +326,9 @@ AI 서버 전용 DB. BE RDS와 분리된 PostgreSQL + pgvector.
 
 | 항목 | 결정 | 이유 |
 |---|---|---|
-| `patient_refs` 분리 | 온프레미스 환자 DB와 클라우드 분리 | 실제 환자 정보는 온프레미스에만 보관 |
+| `patient_refs` lean pointer | SLP 귀속 정보만 보유, 환자 프로필은 `patients`로 분리 | 온프레미스 연동 시 `patient_refs`는 참조 키 역할만 수행, 클라우드 환자 정보는 `patients`에 관리 |
+| `patients` 1:1 FK | `patient_ref_id UNIQUE FK` | 한 참조 키에 클라우드 프로필 하나만 허용 |
+| `sessions` → `patient_ref_id` 참조 | `sessions.patient_ref_id` | 세션은 온프레미스 연동 단위인 참조 키를 기준으로 묶임 |
 | `s3_bucket` 제거 | `object_key`만 저장, bucket은 config에서 관리 | 버킷은 환경별 설정값, DB에 중복 보관 불필요 |
 | `report_segments` 분리 | SOAP 섹션별 편집 가능하게 | 섹션 단위 AI 원본 보존 + SLP 편집 이력 추적 |
 | `language_metrics` 별도 테이블 | AI worker 기록, report 생성 시 읽음 | SOAP Objective 섹션 데이터 소스 |

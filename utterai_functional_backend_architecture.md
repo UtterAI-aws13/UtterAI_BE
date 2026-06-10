@@ -209,13 +209,16 @@ User 도메인은 사용자 계정과 프로필 정보를 관리한다.
 
 ### 기능 목적
 
-Patient Profile 도메인은 분석 대상 환자의 클라우드 측 참조 키를 관리한다.
+Patient Profile 도메인은 두 테이블로 분리하여 관리한다.
 
-실제 환자 정보(이름, 생년월일 등)는 온프레미스 DB에만 보관되며, 클라우드에는 UUID 참조 키만 존재한다.
+- `patient_refs`: 클라우드 ↔ 온프레미스 브릿지. SLP 귀속 정보만 보유. 세션은 이 ID를 외래 키로 참조한다.
+- `patients`: 클라우드 측 환자 프로필 (이름, 생년월일, 성별, 메모 등). `patient_refs`와 1:1 관계.
 
-SLP는 여러 환자 참조를 등록할 수 있다.
+SLP는 여러 환자를 등록할 수 있다.
 
-### 저장 정보 (`patient_refs`)
+### 저장 정보
+
+**`patient_refs`** — 참조 포인터
 
 | 필드 | 설명 |
 |---|---|
@@ -224,24 +227,37 @@ SLP는 여러 환자 참조를 등록할 수 있다.
 | `current_slp_id` | 현재 담당 SLP (FK → users) |
 | `created_at` | 참조 생성일 |
 
+**`patients`** — 클라우드 환자 정보
+
+| 필드 | 설명 |
+|---|---|
+| `id` | 환자 UUID |
+| `patient_ref_id` | FK → patient_refs(id), UNIQUE |
+| `name` | 이름 |
+| `birth_date` | 생년월일 (nullable) |
+| `gender` | 성별: M / F / U (nullable) |
+| `memo` | 치료사 메모 (nullable) |
+| `status` | `ACTIVE` / `DELETED` |
+| `created_at` | 등록일 |
+
 ### 주요 기능
 
 | 기능 | 설명 |
 |---|---|
-| 아동 등록 | 치료사가 새 아동 프로필 생성 |
-| 아동 목록 조회 | 로그인한 치료사의 아동 목록 조회 |
-| 아동 상세 조회 | 특정 아동의 상세 정보 조회 |
-| 아동 정보 수정 | 아동 이름, 메모 등 수정 |
-| 아동 삭제 | 아동 프로필 삭제 또는 비활성화 |
+| 환자 등록 | 치료사가 새 환자 프로필 생성 |
+| 환자 목록 조회 | 로그인한 치료사의 환자 목록 조회 |
+| 환자 상세 조회 | 특정 환자의 상세 정보 조회 |
+| 환자 정보 수정 | 이름, 생년월일, 성별, 메모 수정 |
+| 환자 삭제 | soft delete (`status=DELETED`) |
 
 ### 동작 흐름
 
 ```text
-1. 치료사가 아동 등록 요청
+1. 치료사가 환자 등록 요청 (name, birth_date, gender, memo 포함)
 2. 백엔드가 로그인 사용자 확인
-3. slp_id와 patient 정보를 연결
-4. patient_refs 테이블에 저장
-5. 프론트엔드에 생성된 patient_ref_id 반환
+3. patient_refs row 생성 (flush) — slp 귀속 정보 기록
+4. patients row 생성 (commit) — 프로필 정보 기록
+5. 프론트엔드에 patient_id, patient_ref_id 포함 응답 반환
 ```
 
 ---
@@ -778,21 +794,21 @@ AI 모델 개선은 별도 영역이지만, 기능 백엔드는 사용자의 피
 
 ---
 
-## 6.1 아동 등록 기능
+## 6.1 환자 등록 기능
 
 ### 목적
 
-치료사가 분석 대상 아동을 등록한다.
+치료사가 분석 대상 환자를 등록한다.
 
 ### 동작 순서
 
 ```text
-1. 치료사가 아동 등록 화면에서 정보 입력
+1. 치료사가 환자 등록 화면에서 정보 입력
 2. 프론트엔드가 POST /patients 호출
 3. 백엔드가 JWT 검증
-4. 사용자 역할이 SLP인지 확인
-5. patient_refs 테이블에 저장
-6. 생성된 patient_ref_id 반환
+4. patient_refs row 생성 (same transaction, flush) — SLP 귀속 정보 기록
+5. patients row 생성 (commit) — 이름/생년월일/성별/메모 저장
+6. 프론트엔드에 통합 응답 반환
 ```
 
 ### 요청 예시
@@ -800,8 +816,8 @@ AI 모델 개선은 별도 영역이지만, 기능 백엔드는 사용자의 피
 ```json
 {
   "name": "김OO",
-  "birthDate": "2020-03-15",
-  "gender": "MALE",
+  "birth_date": "2020-03-15",
+  "gender": "M",
   "memo": "초기 상담 대상"
 }
 ```
@@ -810,11 +826,16 @@ AI 모델 개선은 별도 영역이지만, 기능 백엔드는 사용자의 피
 
 ```json
 {
-  "patientId": "patient_123",
+  "id": "patient_uuid",
+  "patient_ref_id": "ref_uuid",
   "name": "김OO",
-  "birthDate": "2020-03-15",
-  "gender": "MALE",
-  "createdAt": "2026-05-28T10:00:00+09:00"
+  "birth_date": "2020-03-15",
+  "gender": "M",
+  "memo": "초기 상담 대상",
+  "status": "ACTIVE",
+  "created_by_slp_id": "slp_uuid",
+  "current_slp_id": "slp_uuid",
+  "created_at": "2026-05-28T10:00:00+09:00"
 }
 ```
 
@@ -1108,11 +1129,34 @@ CREATE TABLE users (
 
 ## 7.2 patient_refs
 
-> 온프레미스 환자 DB와의 브릿지. 실제 환자 정보는 온프레미스에 보관하고, 클라우드에서는 참조 UUID만 관리한다.
+> 클라우드 ↔ 온프레미스 브릿지. SLP 귀속 정보만 보유. 세션은 이 ID를 외래 키로 참조한다.
 
 ```sql
 CREATE TABLE patient_refs (
     id UUID PRIMARY KEY,
+    created_by_slp_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    current_slp_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    created_at TIMESTAMPTZ NOT NULL
+);
+```
+
+---
+
+## 7.2-b patients
+
+> 클라우드 측 환자 프로필. patient_refs와 1:1 관계. sessions는 patient_ref_id를 참조한다.
+
+```sql
+CREATE TYPE patient_status AS ENUM ('ACTIVE', 'DELETED');
+
+CREATE TABLE patients (
+    id UUID PRIMARY KEY,
+    patient_ref_id UUID NOT NULL UNIQUE REFERENCES patient_refs(id) ON DELETE RESTRICT,
+    name VARCHAR(100) NOT NULL,
+    birth_date DATE,
+    gender VARCHAR(1),
+    memo TEXT,
+    status patient_status NOT NULL DEFAULT 'ACTIVE',
     created_at TIMESTAMPTZ NOT NULL
 );
 ```
@@ -1664,7 +1708,7 @@ soft delete 대상은 다음과 같다.
 | 리소스 | 삭제 방식 | 이유 |
 |---|---|---|
 | users | `status=INACTIVE` | 감사 추적과 토큰/세션 연계 유지 |
-| patient_refs | `status=DELETED` | 세션/결과 참조 보존 필요 |
+| patients | `status=DELETED` | 세션/결과 참조 보존 필요 (`patient_refs`에는 status 컬럼 없음) |
 | sessions | `status=DELETED` | 분석/리포트 이력 보존 필요 |
 | audio_files | `status=DELETED` | 분석 재현성 추적 필요 |
 | reports | `status=DELETED` | 배포 이력과 재생성 이력 보존 |
@@ -1789,7 +1833,7 @@ DB 트랜잭션은 짧게 유지하고, 외부 네트워크 호출은 트랜잭�
 
 | 작업 | 같은 DB 트랜잭션으로 묶을 범위 | 트랜잭션 밖에서 할 일 |
 |---|---|---|
-| 환자 등록 | patient_refs row 생성 | 없음 |
+| 환자 등록 | patient_refs row 생성 (flush) + patients row 생성 (commit) | 없음 |
 | 세션 생성 | session row 생성 | 없음 |
 | 업로드 URL 발급 | audio_files row 생성 | S3 presigned URL 생성 |
 | 업로드 완료 처리 | audio_files 상태 변경 + session 상태 변경 | S3 HeadObject 호출 |
