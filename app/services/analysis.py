@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session as DbSession
 
 from app.core.config import get_settings
 from app.core.enums import AnalysisJobStatus, AudioFileStatus, SessionStatus, UserRole
-from app.infrastructure.ai_client.client import AIClient
+from app.infrastructure.sqs.client import SQSClient
 from app.models.entities import AnalysisJob
 from app.observability.metrics import (
     record_analysis_job_created,
@@ -51,7 +51,7 @@ class AnalysisJobService:
         self.audio_repository = AudioFileRepository(db)
         self.session_repository = SessionRepository(db)
         self.template_repository = TemplateRepository(db)
-        self.ai_client = AIClient()
+        self.sqs_client = SQSClient()
 
     def create(self, request: AnalysisJobCreateRequest, current_user: UserRead) -> AnalysisJobRead:
         tracer = trace.get_tracer(__name__)
@@ -125,20 +125,12 @@ class AnalysisJobService:
                 dispatch_payload["templateId"] = str(request.template_id)
 
             try:
-                dispatch_result = self.ai_client.dispatch_analysis_job(dispatch_payload)
+                self.sqs_client.send_analysis_job(dispatch_payload)
             except Exception:
                 record_analysis_job_dispatch_failed()
                 raise
 
-            if dispatch_result is not None:
-                record_analysis_job_dispatched()
-                created_job.status = AnalysisJobStatus.DOWNLOADING
-                created_job = self.analysis_repository.update(created_job)
-                session.status = SessionStatus.ANALYSIS_PROCESSING
-                self.session_repository.update(session)
-            else:
-                span.set_attribute("analysis.job.dispatch.skipped", True)
-
+            record_analysis_job_dispatched()
             return AnalysisJobRead.model_validate(created_job)
 
     def list(
