@@ -16,7 +16,7 @@ from app.core.enums import (
 )
 from app.schemas.analysis import AnalysisJobCreateRequest, AnalysisJobProgressCallbackRequest
 from app.schemas.audio import AudioFileCompleteRequest, PresignedUploadRequest
-from app.schemas.report import ApprovalCreateRequest, ReportSegmentUpdateRequest
+from app.schemas.report import ReportSegmentUpdateRequest
 from app.schemas.session import SessionCreateRequest, SessionUpdateRequest
 from app.schemas.template import TemplateCreateRequest
 from app.schemas.transcript import (
@@ -158,18 +158,6 @@ class TestReportSchemas:
         req = ReportSegmentUpdateRequest()
         assert req.content is None
         assert req.title is None
-
-    def test_approval_requires_action(self):
-        with pytest.raises(ValidationError):
-            ApprovalCreateRequest()
-
-    def test_approval_valid_with_comment(self):
-        from app.core.enums import ApprovalAction
-        req = ApprovalCreateRequest(
-            action=ApprovalAction.APPROVED,
-            comment="이상 없음",
-        )
-        assert req.comment == "이상 없음"
 
 
 class TestTranscriptSchemas:

@@ -51,7 +51,7 @@ uvicorn app.main:app --reload
 
 1. `POST /api/v1/auth/signup`
 2. `POST /api/v1/auth/login`
-3. `POST /api/v1/children`
+3. `POST /api/v1/patients`
 4. `POST /api/v1/sessions`
 5. `POST /api/v1/audio-files/presigned-url`
 6. `POST /api/v1/audio-files`
@@ -72,7 +72,7 @@ uvicorn app.main:app --reload
 - S3를 붙일지, 아니면 presigned URL 단계만 형식 검증할지 결정
 - AI callback에 보낼 샘플 payload
 - 최소 2개 계정
-  - `THERAPIST`
+  - `SLP`
   - `ADMIN`
 - transcript/soap/report까지 이어볼 하나의 기준 세션
 
@@ -80,9 +80,9 @@ uvicorn app.main:app --reload
 
 추천 기준 데이터는 다음 정도면 충분하다.
 
-- therapist 계정 1개
+- SLP 계정 1개
 - admin 계정 1개
-- child 1명
+- patient 1명
 - session 1개
 - audio file 1개
 - analysis job 1개

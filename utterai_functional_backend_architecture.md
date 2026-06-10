@@ -156,9 +156,7 @@ Auth 도메인은 사용자의 로그인, 토큰 발급, 권한 검사를 담당
 | 역할 | 설명 |
 |---|---|
 | `ADMIN` | 전체 시스템 관리자 |
-| `THERAPIST` | 치료사 |
-| `GUARDIAN` | 보호자 |
-| `VIEWER` | 제한된 조회 사용자 |
+| `SLP` | 언어재활사 |
 
 ### 동작 흐름
 
@@ -207,26 +205,24 @@ User 도메인은 사용자 계정과 프로필 정보를 관리한다.
 
 ---
 
-## 4.3 Child Profile 도메인
+## 4.3 Patient Profile 도메인
 
 ### 기능 목적
 
-Child Profile 도메인은 분석 대상 아동 정보를 관리한다.
+Patient Profile 도메인은 분석 대상 환자의 클라우드 측 참조 키를 관리한다.
 
-치료사는 여러 아동 프로필을 등록할 수 있다.
+실제 환자 정보(이름, 생년월일 등)는 온프레미스 DB에만 보관되며, 클라우드에는 UUID 참조 키만 존재한다.
 
-### 저장 정보
+SLP는 여러 환자 참조를 등록할 수 있다.
+
+### 저장 정보 (`patient_refs`)
 
 | 필드 | 설명 |
 |---|---|
-| `child_id` | 아동 고유 ID |
-| `therapist_id` | 담당 치료사 ID |
-| `name` | 아동 이름 또는 별칭 |
-| `birth_date` | 생년월일 |
-| `gender` | 성별 |
-| `memo` | 치료사 메모 |
-| `created_at` | 생성일 |
-| `updated_at` | 수정일 |
+| `id` | 클라우드 측 환자 참조 UUID |
+| `created_by_slp_id` | 최초 등록 SLP (FK → users) |
+| `current_slp_id` | 현재 담당 SLP (FK → users) |
+| `created_at` | 참조 생성일 |
 
 ### 주요 기능
 
@@ -243,9 +239,9 @@ Child Profile 도메인은 분석 대상 아동 정보를 관리한다.
 ```text
 1. 치료사가 아동 등록 요청
 2. 백엔드가 로그인 사용자 확인
-3. therapist_id와 child 정보를 연결
-4. children 테이블에 저장
-5. 프론트엔드에 생성된 child_id 반환
+3. slp_id와 patient 정보를 연결
+4. patient_refs 테이블에 저장
+5. 프론트엔드에 생성된 patient_ref_id 반환
 ```
 
 ---
@@ -267,7 +263,7 @@ AI 분석은 음성 파일 하나만으로 끝나지 않는다.
 그래서 백엔드는 분석의 기준 단위로 Session을 관리한다.
 
 ```text
-Child
+Patient
   |
   v
 Session
@@ -462,8 +458,8 @@ AI 서버
   "sessionId": "session_123",
   "summary": {
     "totalUtterances": 42,
-    "childUtterances": 18,
-    "therapistUtterances": 24,
+    "patientUtterances": 18,
+    "slpUtterances": 24,
     "durationSeconds": 530
   },
   "transcriptS3Key": "results/session_123/transcript.json",
@@ -532,7 +528,7 @@ Report 도메인은 분석 결과를 사용자에게 보여주거나 다운로�
 | 리포트 상세 조회 | 리포트 요약 데이터 조회 |
 | 리포트 다운로드 URL 발급 | S3 Presigned Download URL 발급 |
 | 리포트 재생성 요청 | 수정된 발화 기준으로 AI 서버에 재생성 요청 |
-| 리포트 공개 상태 변경 | 보호자 공유 여부 설정 |
+| 리포트 공유 링크 생성 | 보호자 등 외부에 공유할 링크 발급 |
 
 ### 다운로드 흐름
 
@@ -565,9 +561,9 @@ Dashboard 도메인은 웹 메인 화면에서 필요한 요약 데이터를 제
 
 | Method | Endpoint | 설명 |
 |---|---|---|
-| GET | `/api/v1/dashboard/therapist` | 치료사 대시보드 |
+| GET | `/api/v1/dashboard/slp` | 치료사 대시보드 |
 | GET | `/api/v1/dashboard/admin` | 관리자 대시보드 |
-| GET | `/api/v1/children/{childId}/summary` | 아동 요약 |
+| GET | `/api/v1/patients/{patientId}/summary` | 아동 요약 |
 | GET | `/api/v1/sessions/{sessionId}/summary` | 세션 요약 |
 
 ---
@@ -663,15 +659,15 @@ AI 모델 개선은 별도 영역이지만, 기능 백엔드는 사용자의 피
 
 ---
 
-## 5.3 Child API
+## 5.3 Patient API
 
 | Method | Endpoint | 설명 |
 |---|---|---|
-| POST | `/api/v1/children` | 아동 등록 |
-| GET | `/api/v1/children` | 아동 목록 조회 |
-| GET | `/api/v1/children/{childId}` | 아동 상세 조회 |
-| PATCH | `/api/v1/children/{childId}` | 아동 정보 수정 |
-| DELETE | `/api/v1/children/{childId}` | 아동 삭제 |
+| POST | `/api/v1/patients` | 아동 등록 |
+| GET | `/api/v1/patients` | 아동 목록 조회 |
+| GET | `/api/v1/patients/{patientId}` | 아동 상세 조회 |
+| PATCH | `/api/v1/patients/{patientId}` | 아동 정보 수정 |
+| DELETE | `/api/v1/patients/{patientId}` | 아동 삭제 |
 
 ---
 
@@ -750,9 +746,9 @@ AI 모델 개선은 별도 영역이지만, 기능 백엔드는 사용자의 피
 
 | Method | Endpoint | 설명 |
 |---|---|---|
-| GET | `/api/v1/dashboard/therapist` | 치료사 대시보드 |
+| GET | `/api/v1/dashboard/slp` | 치료사 대시보드 |
 | GET | `/api/v1/dashboard/admin` | 관리자 대시보드 |
-| GET | `/api/v1/children/{childId}/summary` | 아동 요약 정보 |
+| GET | `/api/v1/patients/{patientId}/summary` | 아동 요약 정보 |
 | GET | `/api/v1/sessions/{sessionId}/summary` | 세션 요약 정보 |
 
 ---
@@ -792,11 +788,11 @@ AI 모델 개선은 별도 영역이지만, 기능 백엔드는 사용자의 피
 
 ```text
 1. 치료사가 아동 등록 화면에서 정보 입력
-2. 프론트엔드가 POST /children 호출
+2. 프론트엔드가 POST /patients 호출
 3. 백엔드가 JWT 검증
-4. 사용자 역할이 THERAPIST인지 확인
-5. children 테이블에 데이터 저장
-6. 생성된 child_id 반환
+4. 사용자 역할이 SLP인지 확인
+5. patient_refs 테이블에 저장
+6. 생성된 patient_ref_id 반환
 ```
 
 ### 요청 예시
@@ -814,7 +810,7 @@ AI 모델 개선은 별도 영역이지만, 기능 백엔드는 사용자의 피
 
 ```json
 {
-  "childId": "child_123",
+  "patientId": "patient_123",
   "name": "김OO",
   "birthDate": "2020-03-15",
   "gender": "MALE",
@@ -834,7 +830,7 @@ AI 모델 개선은 별도 영역이지만, 기능 백엔드는 사용자의 피
 
 ```text
 1. 치료사가 아동 상세 화면에서 새 세션 생성
-2. 백엔드가 child_id 접근 권한 확인
+2. 백엔드가 patient_ref_id 접근 권한 확인
 3. sessions 테이블에 세션 생성
 4. session 상태를 CREATED로 저장
 5. 생성된 session_id 반환
@@ -844,7 +840,7 @@ AI 모델 개선은 별도 영역이지만, 기능 백엔드는 사용자의 피
 
 ```json
 {
-  "childId": "child_123",
+  "patientId": "patient_123",
   "sessionDate": "2026-05-28",
   "sessionType": "LANGUAGE_ASSESSMENT",
   "memo": "첫 번째 녹음 세션"
@@ -877,7 +873,7 @@ AI 모델 개선은 별도 영역이지만, 기능 백엔드는 사용자의 피
 ### Object Key 예시
 
 ```text
-raw-audio/{therapistId}/{childId}/{sessionId}/{audioId}.wav
+raw-audio/{slpId}/{patientId}/{sessionId}/{audioId}.wav
 ```
 
 사용자가 입력한 파일명을 그대로 S3 Key에 쓰지 않고, 백엔드가 생성한 ID 기반 경로를 사용한다.
@@ -910,7 +906,7 @@ raw-audio/{therapistId}/{childId}/{sessionId}/{audioId}.wav
   "jobId": "job_123",
   "sessionId": "session_123",
   "audioId": "audio_123",
-  "audioS3Key": "raw-audio/user/child/session/audio.wav",
+  "audioS3Key": "raw-audio/slp/patient/session/audio.wav",
   "callbackUrl": "https://api.utterai.com/api/v1/internal/analysis-results/callback"
 }
 ```
@@ -981,7 +977,7 @@ AI 서버가 분석을 완료하면 기능 백엔드에 결과를 전달한다.
   "result": {
     "summary": {
       "totalUtterances": 42,
-      "childUtterances": 18,
+      "patientUtterances": 18,
       "durationSeconds": 530
     },
     "transcriptS3Key": "results/session_123/transcript.json",
@@ -1110,19 +1106,14 @@ CREATE TABLE users (
 
 ---
 
-## 7.2 children
+## 7.2 patient_refs
+
+> 온프레미스 환자 DB와의 브릿지. 실제 환자 정보는 온프레미스에 보관하고, 클라우드에서는 참조 UUID만 관리한다.
 
 ```sql
-CREATE TABLE children (
+CREATE TABLE patient_refs (
     id UUID PRIMARY KEY,
-    therapist_id UUID NOT NULL REFERENCES users(id),
-    name VARCHAR(100) NOT NULL,
-    birth_date DATE,
-    gender VARCHAR(20),
-    memo TEXT,
-    status VARCHAR(50) NOT NULL DEFAULT 'ACTIVE',
-    created_at TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP NOT NULL
+    created_at TIMESTAMPTZ NOT NULL
 );
 ```
 
@@ -1133,14 +1124,16 @@ CREATE TABLE children (
 ```sql
 CREATE TABLE sessions (
     id UUID PRIMARY KEY,
-    child_id UUID NOT NULL REFERENCES children(id),
-    therapist_id UUID NOT NULL REFERENCES users(id),
+    patient_ref_id UUID NOT NULL REFERENCES patient_refs(id),
+    slp_id UUID NOT NULL REFERENCES users(id),
     session_date DATE NOT NULL,
     session_type VARCHAR(100),
+    session_goal TEXT,
     memo TEXT,
     status VARCHAR(50) NOT NULL DEFAULT 'CREATED',
-    created_at TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP NOT NULL
+    completed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL
 );
 ```
 
@@ -1298,36 +1291,7 @@ CREATE TABLE feedbacks (
 
 ---
 
-## 7.12 child_access_grants
-
-보호자 공유 권한은 아동 단위로 관리하고, 세션/결과/리포트 접근 권한은 아동 공유 권한에서 파생시키는 것을 기본으로 한다.
-
-```sql
-CREATE TABLE child_access_grants (
-    id UUID PRIMARY KEY,
-    child_id UUID NOT NULL REFERENCES children(id),
-    grantee_user_id UUID NOT NULL REFERENCES users(id),
-    granted_by_user_id UUID NOT NULL REFERENCES users(id),
-    access_level VARCHAR(50) NOT NULL,
-    status VARCHAR(50) NOT NULL DEFAULT 'ACTIVE',
-    expires_at TIMESTAMP,
-    created_at TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP NOT NULL,
-    revoked_at TIMESTAMP,
-    UNIQUE (child_id, grantee_user_id)
-);
-```
-
-`access_level`은 MVP에서 다음 두 단계만 두는 것이 안전하다.
-
-| access_level | 설명 |
-|---|---|
-| `VIEW_RESULT` | 결과/리포트/세션 조회만 가능 |
-| `VIEW_AND_DOWNLOAD` | 조회 + 리포트 다운로드 가능 |
-
----
-
-## 7.13 utterance_edit_history
+## 7.12 utterance_edit_history
 
 발화 수정은 `utterances` 테이블에 최신본을 유지하고, 별도 이력 테이블에 변경 내역을 append-only로 저장하는 방식을 권장한다.
 
@@ -1411,7 +1375,7 @@ backend/
 │   │   └── v1/
 │   │       ├── auth_router.py
 │   │       ├── user_router.py
-│   │       ├── child_router.py
+│   │       ├── patient_router.py
 │   │       ├── session_router.py
 │   │       ├── audio_router.py
 │   │       ├── analysis_router.py
@@ -1424,7 +1388,7 @@ backend/
 │   ├── domains/
 │   │   ├── auth/
 │   │   ├── user/
-│   │   ├── child/
+│   │   ├── patient/
 │   │   ├── session/
 │   │   ├── audio/
 │   │   ├── analysis/
@@ -1443,7 +1407,7 @@ backend/
 │   │
 │   └── schemas/
 │       ├── auth_schema.py
-│       ├── child_schema.py
+│       ├── patient_schema.py
 │       ├── session_schema.py
 │       ├── audio_schema.py
 │       ├── analysis_schema.py
@@ -1548,7 +1512,7 @@ X-Internal-Token: {internal_token}
   "jobId": "job_123",
   "sessionId": "session_123",
   "audioS3Bucket": "utterai-raw-audio",
-  "audioS3Key": "raw-audio/therapist/child/session/audio.wav",
+  "audioS3Key": "raw-audio/slp/patient/session/audio.wav",
   "callbackUrl": "https://api.utterai.com/api/v1/internal/analysis-results/callback"
 }
 ```
@@ -1574,7 +1538,7 @@ X-Internal-Token: {internal_token}
   "progress": 100,
   "summary": {
     "totalUtterances": 42,
-    "childUtterances": 18
+    "patientUtterances": 18
   },
   "resultFiles": {
     "transcriptS3Key": "results/session_123/transcript.json",
@@ -1648,11 +1612,11 @@ X-Signature: sha256={hmac_signature}
 | 리소스 | 접근 가능한 사용자 |
 |---|---|
 | 내 프로필 | 본인 |
-| 아동 프로필 | 담당 치료사, 관리자 |
-| 세션 | 담당 치료사, 관리자, 공유받은 보호자 |
-| 음성 파일 | 담당 치료사, 관리자 |
-| 분석 결과 | 담당 치료사, 관리자, 공유받은 보호자 |
-| 리포트 | 담당 치료사, 관리자, 공유받은 보호자 |
+| 환자 정보 | 담당 SLP, 관리자 |
+| 세션 | 담당 SLP, 관리자 |
+| 음성 파일 | 담당 SLP, 관리자 |
+| 분석 결과 | 담당 SLP, 관리자 |
+| 리포트 | 담당 SLP, 관리자 (보호자에게는 파일/링크 공유) |
 | 관리자 API | 관리자만 가능 |
 
 ---
@@ -1664,43 +1628,28 @@ X-Signature: sha256={hmac_signature}
 ```text
 1. JWT에서 user_id 추출
 2. session_id로 세션 조회
-3. 세션의 therapist_id와 user_id 비교
+3. 세션의 slp_id와 user_id 비교
 4. 같으면 접근 허용
 5. 관리자라면 접근 허용
-6. 공유 권한이 있으면 접근 허용
-7. 아니면 403 Forbidden 반환
+6. 아니면 403 Forbidden 반환
 ```
 
 ---
 
-### 11.3 공유 권한 모델
+### 11.3 보호자 리포트 공유 방식
 
-공유는 `세션 단위`가 아니라 `아동 단위`를 기본으로 한다.
+보호자는 앱에 직접 로그인하지 않는다. 리포트 공유는 다음 방식 중 하나로 처리한다.
 
-이유는 다음과 같다.
-
-- 보호자는 특정 아동의 여러 세션을 연속적으로 봐야 한다.
-- 세션별로 권한을 따로 주면 운영 복잡도가 불필요하게 커진다.
-- 세션, 결과, 리포트 권한을 하나의 기준으로 묶기 쉽다.
-
-공유 규칙은 다음과 같이 정의한다.
-
-```text
-1. 공유 생성 주체는 담당 치료사 또는 관리자
-2. 공유 대상은 GUARDIAN 또는 VIEWER 역할 사용자
-3. 공유 기준은 child_id
-4. 공유가 ACTIVE이면 해당 child의 session/result/report 조회 가능
-5. download는 access_level이 VIEW_AND_DOWNLOAD일 때만 허용
-6. revoke 또는 expires_at 경과 시 즉시 접근 차단
-7. audio 원본 다운로드는 공유 대상에게 기본적으로 허용하지 않음
-```
+| 방식 | 설명 |
+|---|---|
+| 파일 전달 | SLP가 리포트를 다운로드해 보호자에게 직접 전달 |
+| 공유 링크 생성 | SLP가 리포트 공유 링크를 생성하고 보호자에게 전달 |
 
 권한 판단 우선순위는 다음과 같다.
 
 ```text
 ADMIN
--> 세션 담당 therapist
--> ACTIVE child_access_grants 보유 사용자
+-> 세션 담당 SLP
 -> 그 외 거부
 ```
 
@@ -1715,10 +1664,9 @@ soft delete 대상은 다음과 같다.
 | 리소스 | 삭제 방식 | 이유 |
 |---|---|---|
 | users | `status=INACTIVE` | 감사 추적과 토큰/세션 연계 유지 |
-| children | `status=DELETED` | 세션/결과 참조 보존 필요 |
+| patient_refs | `status=DELETED` | 세션/결과 참조 보존 필요 |
 | sessions | `status=DELETED` | 분석/리포트 이력 보존 필요 |
 | audio_files | `status=DELETED` | 분석 재현성 추적 필요 |
-| child_access_grants | `status=REVOKED` | 권한 변경 감사 필요 |
 | reports | `status=DELETED` | 배포 이력과 재생성 이력 보존 |
 
 물리 삭제를 허용해도 되는 대상은 다음과 같다.
@@ -1841,7 +1789,7 @@ DB 트랜잭션은 짧게 유지하고, 외부 네트워크 호출은 트랜잭�
 
 | 작업 | 같은 DB 트랜잭션으로 묶을 범위 | 트랜잭션 밖에서 할 일 |
 |---|---|---|
-| 아동 생성 | child row 생성 | 없음 |
+| 환자 등록 | patient_refs row 생성 | 없음 |
 | 세션 생성 | session row 생성 | 없음 |
 | 업로드 URL 발급 | audio_files row 생성 | S3 presigned URL 생성 |
 | 업로드 완료 처리 | audio_files 상태 변경 + session 상태 변경 | S3 HeadObject 호출 |
@@ -1947,7 +1895,7 @@ S3 Bucket은 Public Access를 차단한다.
 
 | 지표 | 설명 |
 |---|---|
-| Daily Active Therapists | 일간 활성 치료사 수 |
+| Daily Active SLPs | 일간 활성 SLP 수 |
 | Created Sessions | 생성된 상담 세션 수 |
 | Uploaded Audio Count | 업로드된 음성 파일 수 |
 | Completed Analysis Count | 완료된 분석 수 |
@@ -1986,9 +1934,9 @@ S3 Bucket은 Public Access를 차단한다.
 ### 14.2 2단계: 아동과 세션 관리
 
 ```text
-1. children 테이블 생성
+1. patient_refs 테이블 생성
 2. sessions 테이블 생성
-3. 아동 CRUD API 구현
+3. 환자 CRUD API 구현
 4. 세션 CRUD API 구현
 5. 권한 체크 구현
 ```
@@ -2071,7 +2019,7 @@ MVP에서는 다음 순서로 구현하는 것이 가장 좋다.
 
 ```text
 Auth
-  -> Child
+  -> Patient
   -> Session
   -> Audio Upload
   -> Analysis Job

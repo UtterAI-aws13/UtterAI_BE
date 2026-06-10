@@ -14,7 +14,7 @@ from app.schemas.session import SessionCreateRequest, SessionUpdateRequest
 from app.services.session import SessionService
 
 
-def _make_user(role: UserRole = UserRole.THERAPIST) -> UserRead:
+def _make_user(role: UserRole = UserRole.SLP) -> UserRead:
     return UserRead(
         id=uuid.uuid4(),
         email="slp@test.com",
@@ -88,8 +88,8 @@ class TestSessionServiceCreate:
 
 
 class TestSessionServiceList:
-    def test_therapist_filters_by_own_slp_id(self, service):
-        user = _make_user(UserRole.THERAPIST)
+    def test_slp_filters_by_own_slp_id(self, service):
+        user = _make_user(UserRole.SLP)
         service.session_repository.list_active.return_value = []
 
         service.list(user)
@@ -109,12 +109,6 @@ class TestSessionServiceList:
             patient_ref_id=None,
         )
 
-    def test_viewer_raises_403(self, service):
-        user = _make_user(UserRole.VIEWER)
-        with pytest.raises(HTTPException) as exc:
-            service.list(user)
-        assert exc.value.status_code == 403
-
 
 class TestSessionServiceGet:
     def test_admin_can_access_any_session(self, service):
@@ -125,7 +119,7 @@ class TestSessionServiceGet:
         result = service._get_accessible_session(session.id, admin)
         assert result is session
 
-    def test_therapist_can_access_own_session(self, service):
+    def test_slp_can_access_own_session(self, service):
         user = _make_user()
         session = _make_session(user.id)
         service.session_repository.get_by_id.return_value = session
@@ -133,7 +127,7 @@ class TestSessionServiceGet:
         result = service._get_accessible_session(session.id, user)
         assert result is session
 
-    def test_therapist_cannot_access_other_session(self, service):
+    def test_slp_cannot_access_other_session(self, service):
         user = _make_user()
         session = _make_session(uuid.uuid4())  # different owner
         service.session_repository.get_by_id.return_value = session

@@ -5,8 +5,7 @@ from enum import StrEnum
 
 class UserRole(StrEnum):
     ADMIN = "ADMIN"
-    THERAPIST = "THERAPIST"
-    VIEWER = "VIEWER"
+    SLP = "SLP"
 
 
 class UserStatus(StrEnum):
@@ -53,14 +52,14 @@ class AnalysisJobStatus(StrEnum):
 
 
 class TargetSpeaker(StrEnum):
-    CHILD = "CHILD"
-    THERAPIST = "THERAPIST"
+    PATIENT = "PATIENT"
+    SLP = "SLP"
     ALL = "ALL"
 
 
 class SpeakerRole(StrEnum):
-    CHILD = "CHILD"
-    THERAPIST = "THERAPIST"
+    PATIENT = "PATIENT"
+    SLP = "SLP"
     GUARDIAN = "GUARDIAN"
     UNKNOWN = "UNKNOWN"
 
@@ -98,7 +97,3 @@ class ReportSegmentType(StrEnum):
     CUSTOM = "CUSTOM"
 
 
-class ApprovalAction(StrEnum):
-    APPROVED = "APPROVED"
-    REJECTED = "REJECTED"
-    REVISION_REQUESTED = "REVISION_REQUESTED"

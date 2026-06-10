@@ -44,7 +44,7 @@ class SessionService:
     ) -> list[SessionRead]:
         if current_user.role == UserRole.ADMIN:
             sessions = self.session_repository.list_active(patient_ref_id=patient_ref_id)
-        elif current_user.role == UserRole.THERAPIST:
+        elif current_user.role == UserRole.SLP:
             sessions = self.session_repository.list_active(
                 slp_id=current_user.id,
                 patient_ref_id=patient_ref_id,
@@ -52,7 +52,7 @@ class SessionService:
         else:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only therapists or admins can view sessions.",
+                detail="Only SLPs or admins can view sessions.",
             )
         return [SessionRead.model_validate(s) for s in sessions]
 
@@ -94,7 +94,7 @@ class SessionService:
             )
         if current_user.role == UserRole.ADMIN:
             return session
-        if current_user.role == UserRole.THERAPIST and session.slp_id == current_user.id:
+        if current_user.role == UserRole.SLP and session.slp_id == current_user.id:
             return session
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

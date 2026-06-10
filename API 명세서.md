@@ -1,10 +1,10 @@
 # API 명세서
 
-이 문서는 현재 백엔드 구현 방향에 맞춘 API 명세 초안이다.
+이 문서는 현재 백엔드 구현 방향에 맞춘 API 명세이다.
 
 ## 기준
 
-- 도메인 명칭은 `patients` 대신 `children`을 사용한다.
+- 도메인 명칭은 `children` 대신 `patients`를 사용한다.
 - URL과 권한 규칙은 현재 구현된 FastAPI 코드와 아키텍처 문서를 기준으로 맞춘다.
 - 아직 미구현인 API도 이후 작업 범위를 명확히 하기 위해 함께 적어둔다.
 
@@ -29,9 +29,9 @@
 
 ---
 
-## 2. Users / Therapists
+## 2. Users / SLPs
 
-현재 사용자 관리 API는 구현 전이다. 문서상 `therapists`라는 이름을 쓰고 있었지만 실제 구현에서는 `users` 또는 `admin user management`로 재정리할 가능성이 높다.
+사용자 관리 API. Role은 `ADMIN`, `SLP` 두 가지만 존재한다.
 
 | 상태 | 기능 | 사용자 | Method | URL | Query Param | Request Body | 설명 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -43,40 +43,32 @@
 
 ---
 
-## 3. Children
+## 3. Patients
 
-`patients` 대신 `children` 도메인으로 정리한다.
+`children` 대신 `patients` 도메인으로 정리한다.
 
 ### 구현 완료
 
 | 상태 | 기능 | 사용자 | Method | URL | Query Param | Request Body | 설명 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 구현됨 | 아동 목록 조회 | 치료사, 관리자 | GET | `/api/v1/children` | - | - | 치료사는 본인 소유 아동만, 관리자는 전체 조회 |
-| 구현됨 | 아동 상세 조회 | 치료사, 관리자 | GET | `/api/v1/children/{childId}` | - | - | 아동 기본 정보 조회 |
-| 구현됨 | 아동 등록 | 치료사, 관리자 | POST | `/api/v1/children` | - | `name`, `birth_date`, `gender`, `memo`, `therapist_id(optional, admin only)` | 아동 정보 등록 |
-| 구현됨 | 아동 정보 수정 | 치료사, 관리자 | PATCH | `/api/v1/children/{childId}` | - | `name`, `birth_date`, `gender`, `memo` | 아동 정보 수정 |
-| 구현됨 | 아동 삭제 | 치료사, 관리자 | DELETE | `/api/v1/children/{childId}` | - | - | soft delete 처리 |
-
-### 후속 예정
-
-| 상태 | 기능 | 사용자 | Method | URL | Query Param | Request Body | 설명 |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 미구현 | 보호자 공유 권한 조회 | 치료사, 관리자 | GET | `/api/v1/children/{childId}/access-grants` | - | - | 아동 공유 권한 목록 조회 |
-| 미구현 | 보호자 공유 권한 생성 | 치료사, 관리자 | POST | `/api/v1/children/{childId}/access-grants` | - | `granteeUserId`, `accessLevel`, `expiresAt(optional)` | 보호자/조회 사용자 공유 권한 생성 |
-| 미구현 | 보호자 공유 권한 해제 | 치료사, 관리자 | DELETE | `/api/v1/children/{childId}/access-grants/{grantId}` | - | - | 공유 권한 해제 |
+| 구현됨 | 환자 목록 조회 | 치료사, 관리자 | GET | `/api/v1/patients` | - | - | 치료사는 본인 소유 환자만, 관리자는 전체 조회 |
+| 구현됨 | 환자 상세 조회 | 치료사, 관리자 | GET | `/api/v1/patients/{patientId}` | - | - | 환자 기본 정보 조회 |
+| 구현됨 | 환자 등록 | 치료사, 관리자 | POST | `/api/v1/patients` | - | `name`, `birth_date`, `gender`, `memo`, `slp_id(optional, admin only)` | 환자 정보 등록 |
+| 구현됨 | 환자 정보 수정 | 치료사, 관리자 | PATCH | `/api/v1/patients/{patientId}` | - | `name`, `birth_date`, `gender`, `memo` | 환자 정보 수정 |
+| 구현됨 | 환자 삭제 | 치료사, 관리자 | DELETE | `/api/v1/patients/{patientId}` | - | - | soft delete 처리 |
 
 ---
 
 ## 4. Sessions
 
-세션은 아동에 종속되지만, 생성/조회 동선의 단순화를 위해 `/sessions`를 기본 리소스로 둔다.
+세션은 환자에 종속되지만, 생성/조회 동선의 단순화를 위해 `/sessions`를 기본 리소스로 둔다.
 
 ### 구현 완료
 
 | 상태 | 기능 | 사용자 | Method | URL | Query Param | Request Body | 설명 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 구현됨 | 세션 생성 | 치료사, 관리자 | POST | `/api/v1/sessions` | - | `child_id`, `session_date`, `session_type`, `memo` | 특정 아동에 연결된 세션 생성 |
-| 구현됨 | 세션 목록 조회 | 치료사, 관리자 | GET | `/api/v1/sessions` | `child_id(optional)` | - | 치료사는 본인 세션만, 관리자는 전체 조회 |
+| 구현됨 | 세션 생성 | 치료사, 관리자 | POST | `/api/v1/sessions` | - | `patient_ref_id`, `session_date`, `session_type`, `memo` | 특정 환자에 연결된 세션 생성 |
+| 구현됨 | 세션 목록 조회 | 치료사, 관리자 | GET | `/api/v1/sessions` | `patient_ref_id(optional)` | - | 치료사는 본인 세션만, 관리자는 전체 조회 |
 | 구현됨 | 세션 상세 조회 | 치료사, 관리자 | GET | `/api/v1/sessions/{sessionId}` | - | - | 특정 세션 상세 조회 |
 | 구현됨 | 세션 수정 | 치료사, 관리자 | PATCH | `/api/v1/sessions/{sessionId}` | - | `session_date`, `session_type`, `memo`, `status` | 세션 정보 수정 |
 | 구현됨 | 세션 삭제 | 치료사, 관리자 | DELETE | `/api/v1/sessions/{sessionId}` | - | - | soft delete 처리 |
@@ -166,7 +158,7 @@
 | 상태 | 기능 | 사용자 | Method | URL | Query Param | Request Body | 설명 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 구현됨 | SOAP Note 초안 생성 | 치료사, 관리자 | POST | `/api/v1/soap-notes/generate` | - | `sessionId`, `transcriptId`, `clinicalAnalysisJobId(optional)` | 분석 결과 기반 초안 생성 |
-| 구현됨 | SOAP Note 목록 조회 | 치료사, 관리자 | GET | `/api/v1/soap-notes` | `sessionId(optional)`, `childId(optional)` | - | SOAP Note 목록 조회 |
+| 구현됨 | SOAP Note 목록 조회 | 치료사, 관리자 | GET | `/api/v1/soap-notes` | `sessionId(optional)`, `patientId(optional)` | - | SOAP Note 목록 조회 |
 | 구현됨 | SOAP Note 상세 조회 | 치료사, 관리자 | GET | `/api/v1/soap-notes/{noteId}` | - | - | SOAP Note 상세 조회 |
 | 구현됨 | SOAP Note 수정 | 치료사, 관리자 | PATCH | `/api/v1/soap-notes/{noteId}` | - | `subjective`, `objective`, `assessment`, `plan` | mutable SOAP Note 수정 |
 | 구현됨 | SOAP Note 저장 | 치료사, 관리자 | PATCH | `/api/v1/soap-notes/{noteId}/save` | - | - | 수정본 저장 |
@@ -186,7 +178,7 @@
 | 상태 | 기능 | 사용자 | Method | URL | Query Param | Request Body | 설명 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 구현됨 | 리포트 생성 | 치료사, 관리자 | POST | `/api/v1/reports` | - | `sessionId`, `resultId`, `templateType` | finalized SOAP Note와 분석 결과를 기준으로 리포트를 생성한다. |
-| 구현됨 | 리포트 목록 조회 | 치료사, 관리자 | GET | `/api/v1/reports` | `childId(optional)` | - | 현재 사용자에게 보이는 리포트 목록을 조회한다. |
+| 구현됨 | 리포트 목록 조회 | 치료사, 관리자 | GET | `/api/v1/reports` | `patientId(optional)` | - | 현재 사용자에게 보이는 리포트 목록을 조회한다. |
 | 구현됨 | 리포트 상세 조회 | 치료사, 관리자 | GET | `/api/v1/reports/{reportId}` | - | - | 리포트 본문과 메타데이터를 조회한다. |
 | 구현됨 | 리포트 수정 | 치료사, 관리자 | PATCH | `/api/v1/reports/{reportId}` | - | `title`, `content`, `memo` | 생성된 리포트의 제목, 본문, 메모를 수동 수정한다. |
 | 구현됨 | 리포트 다운로드 | 치료사, 관리자 | GET | `/api/v1/reports/{reportId}/download` | - | - | MVP에서는 텍스트 첨부파일 다운로드를 제공하고 PDF 렌더링은 후속 작업으로 남긴다. |

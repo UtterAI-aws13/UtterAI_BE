@@ -49,7 +49,7 @@ Base URL: `/api/v1`
 | 도메인 | 엔드포인트 prefix | 구현 상태 |
 |---|---|---|
 | Auth | `/auth` | 완료 |
-| Children | `/children` | 완료 |
+| Patients | `/patients` | 완료 |
 | Sessions | `/sessions` | 완료 |
 | Audio Files | `/audio-files` | 완료 |
 | Analysis Jobs | `/analysis-jobs` | 완료 |

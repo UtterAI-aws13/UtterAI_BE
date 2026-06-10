@@ -3,7 +3,6 @@
 from app.models.base import Base
 from app.models.entities import (
     AnalysisJob,
-    ApprovalHistory,
     AudioFile,
     LanguageMetrics,
     PatientRef,
@@ -19,7 +18,6 @@ from app.models.entities import (
 
 __all__ = [
     "AnalysisJob",
-    "ApprovalHistory",
     "AudioFile",
     "Base",
     "LanguageMetrics",

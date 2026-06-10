@@ -1,4 +1,4 @@
-"""Service-layer logic for report reads, edits, and approvals."""
+"""Service-layer logic for report reads and edits."""
 
 from __future__ import annotations
 
@@ -8,14 +8,12 @@ from datetime import UTC, datetime
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session as DbSession
 
-from app.core.enums import ApprovalAction, ReportStatus, SessionStatus, UserRole
-from app.models.entities import ApprovalHistory, Session as SessionEntity
+from app.core.enums import ReportStatus, SessionStatus, UserRole
+from app.models.entities import Session as SessionEntity
 from app.repositories.report import ReportRepository
 from app.repositories.session import SessionRepository
 from app.schemas.auth import UserRead
 from app.schemas.report import (
-    ApprovalCreateRequest,
-    ApprovalHistoryRead,
     ReportRead,
     ReportSegmentRead,
     ReportSegmentUpdateRequest,
@@ -102,39 +100,6 @@ class ReportService:
         updated = self.report_repository.update(report)
         return ReportRead.model_validate(updated)
 
-    def create_approval(
-        self,
-        report_id: uuid.UUID,
-        request: ApprovalCreateRequest,
-        current_user: UserRead,
-    ) -> ApprovalHistoryRead:
-        report = self._get_accessible_report(report_id, current_user)
-
-        approval = ApprovalHistory(
-            report_id=report_id,
-            approved_by=current_user.id,
-            action=request.action,
-            comment=request.comment,
-            created_at=datetime.now(UTC),
-        )
-        stored = self.report_repository.create_approval(approval)
-
-        if request.action == ApprovalAction.APPROVED:
-            report.status = ReportStatus.APPROVED
-        elif request.action == ApprovalAction.REJECTED:
-            report.status = ReportStatus.REVIEWING
-        elif request.action == ApprovalAction.REVISION_REQUESTED:
-            report.status = ReportStatus.REVIEWING
-        report.updated_at = datetime.now(UTC)
-        self.report_repository.update(report)
-
-        return ApprovalHistoryRead.model_validate(stored)
-
-    def list_approvals(self, report_id: uuid.UUID, current_user: UserRead) -> list[ApprovalHistoryRead]:
-        self._get_accessible_report(report_id, current_user)
-        approvals = self.report_repository.list_approvals(report_id)
-        return [ApprovalHistoryRead.model_validate(a) for a in approvals]
-
     def _get_accessible_session(self, session_id: uuid.UUID, current_user: UserRead) -> SessionEntity:
         session = self.session_repository.get_by_id(session_id)
         if session is None or session.status == SessionStatus.DELETED:
@@ -144,7 +109,7 @@ class ReportService:
             )
         if current_user.role == UserRole.ADMIN:
             return session
-        if current_user.role == UserRole.THERAPIST and session.slp_id == current_user.id:
+        if current_user.role == UserRole.SLP and session.slp_id == current_user.id:
             return session
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

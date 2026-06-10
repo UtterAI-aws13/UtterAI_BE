@@ -1,4 +1,4 @@
-"""Report read, segment edit, and approval endpoints."""
+"""Report read and segment edit endpoints."""
 
 from __future__ import annotations
 
@@ -11,8 +11,6 @@ from app.api.dependencies import get_current_user
 from app.core.db import get_db_session
 from app.schemas.auth import UserRead
 from app.schemas.report import (
-    ApprovalCreateRequest,
-    ApprovalHistoryRead,
     ReportRead,
     ReportSegmentRead,
     ReportSegmentUpdateRequest,
@@ -77,22 +75,3 @@ def update_report_status(
     return service.update_status(report_id, request, current_user)
 
 
-@router.post("/{report_id}/approvals", response_model=ApprovalHistoryRead, status_code=201)
-def create_approval(
-    report_id: uuid.UUID,
-    request: ApprovalCreateRequest,
-    current_user: UserRead = Depends(get_current_user),
-    db: Session = Depends(get_db_session),
-) -> ApprovalHistoryRead:
-    service = ReportService(db)
-    return service.create_approval(report_id, request, current_user)
-
-
-@router.get("/{report_id}/approvals", response_model=list[ApprovalHistoryRead])
-def list_approvals(
-    report_id: uuid.UUID,
-    current_user: UserRead = Depends(get_current_user),
-    db: Session = Depends(get_db_session),
-) -> list[ApprovalHistoryRead]:
-    service = ReportService(db)
-    return service.list_approvals(report_id, current_user)

@@ -36,7 +36,7 @@ class TranscriptService:
 #         """Persist completed analysis results and transcript rows from AI callback.
 
 #         The callback is treated as the first source of transcript truth. It
-#         stores summary/metrics plus speaker and utterance rows so later therapist
+#         stores summary/metrics plus speaker and utterance rows so later SLP
 #         review can happen entirely through backend-managed data.
 #         """
 
@@ -323,7 +323,7 @@ class TranscriptService:
             )
         if current_user.role == UserRole.ADMIN:
             return session
-        if current_user.role == UserRole.THERAPIST and session.slp_id == current_user.id:
+        if current_user.role == UserRole.SLP and session.slp_id == current_user.id:
             return session
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
