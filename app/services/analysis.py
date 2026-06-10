@@ -112,17 +112,20 @@ class AnalysisJobService:
             self.session_repository.update(session)
 
             dispatch_payload = {
-                "jobId": str(created_job.id),
-                "sessionId": str(created_job.session_id),
-                "audioFileId": str(created_job.audio_file_id),
-                "audioObjectKey": audio_file.object_key,
-                "progressCallbackUrl": (
-                    f"{settings.public_api_base_url.rstrip('/')}"
-                    f"/api/v1/internal/analysis-jobs/{created_job.id}/progress"
-                ),
+                "job_id": str(created_job.id),
+                "session_id": str(created_job.session_id),
+                "audio_file_id": str(created_job.audio_file_id),
+                "user_id": str(current_user.id),
+                "audio": {
+                    "bucket": settings.raw_audio_bucket,
+                    "key": audio_file.object_key,
+                    "content_type": audio_file.content_type or "audio/wav",
+                },
+                "options": {},
+                "requested_at": now.isoformat(),
             }
             if request.template_id is not None:
-                dispatch_payload["templateId"] = str(request.template_id)
+                dispatch_payload["options"]["template_id"] = str(request.template_id)
 
             try:
                 self.sqs_client.send_analysis_job(dispatch_payload)
