@@ -7,10 +7,10 @@
 | 담당 | 비담당 |
 |---|---|
 | 사용자 인증 / 권한 관리 | AI 모델 추론 (`UtterAI_AI`) |
-| 아동 프로필 / 세션 관리 | 음성 STT / 화자 분리 / 지표 계산 |
+| 환자 참조 / 세션 관리 | 음성 STT / 화자 분리 / 지표 계산 |
 | S3 presigned URL 발급 및 업로드 완료 처리 | 인프라 배포 정의 (`UtterAI_Infra`) |
 | AI 분석 요청 생성 및 상태 추적 | 프론트엔드 (`UtterAI_FE`) |
-| 분석 결과 / 전사 / SOAP 노트 / 리포트 API 제공 | |
+| 전사 / 리포트 API 제공 | |
 
 ## 기술 스택
 
@@ -49,13 +49,10 @@ Base URL: `/api/v1`
 | 도메인 | 엔드포인트 prefix | 구현 상태 |
 |---|---|---|
 | Auth | `/auth` | 완료 |
-| Patients | `/patients` | 완료 |
 | Sessions | `/sessions` | 완료 |
 | Audio Files | `/audio-files` | 완료 |
 | Analysis Jobs | `/analysis-jobs` | 완료 |
-| Analysis Results | `/analysis-results` | 완료 |
 | Transcripts | `/transcripts` | 완료 |
-| SOAP Notes | `/soap-notes` | 완료 |
 | Reports | `/reports` | 완료 |
 | Templates | `/templates` | 완료 |
 | AI 내부 콜백 | `/internal/analysis-jobs`, `/internal/analysis-results` | 완료 |

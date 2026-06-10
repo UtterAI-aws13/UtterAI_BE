@@ -51,18 +51,19 @@ uvicorn app.main:app --reload
 
 1. `POST /api/v1/auth/signup`
 2. `POST /api/v1/auth/login`
-3. `POST /api/v1/patients`
-4. `POST /api/v1/sessions`
-5. `POST /api/v1/audio-files/presigned-url`
-6. `POST /api/v1/audio-files`
+3. `POST /api/v1/sessions`
+4. `POST /api/v1/audio-files/presigned-url`
+5. `PUT <presigned-url>` (S3 직접 업로드)
+6. `POST /api/v1/audio-files/{audioFileId}/complete`
 7. `POST /api/v1/analysis-jobs`
 8. `POST /api/v1/internal/analysis-jobs/{jobId}/progress`
 9. `POST /api/v1/internal/analysis-results/callback`
-10. `GET /api/v1/transcripts/{resultId}`
-11. `PATCH /api/v1/transcripts/{resultId}/confirm`
-12. `POST /api/v1/soap-notes/generate`
-13. `PATCH /api/v1/soap-notes/{noteId}/finalize`
-14. `POST /api/v1/reports`
+10. `GET /api/v1/sessions/{sessionId}/transcript`
+11. `PATCH /api/v1/transcripts/{transcriptId}/segments/{segmentId}`
+12. `PATCH /api/v1/transcripts/{transcriptId}/finalize`
+13. `GET /api/v1/reports`
+14. `GET /api/v1/reports/{reportId}/segments`
+15. `PATCH /api/v1/reports/{reportId}/segments/{segmentId}`
 
 ## 4. What You Need To Prepare
 
@@ -74,7 +75,7 @@ uvicorn app.main:app --reload
 - 최소 2개 계정
   - `SLP`
   - `ADMIN`
-- transcript/soap/report까지 이어볼 하나의 기준 세션
+- transcript/report까지 이어볼 하나의 기준 세션
 
 ## 5. Minimum Test Data To Prepare
 
