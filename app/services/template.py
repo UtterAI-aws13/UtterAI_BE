@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import io
+import os
 import uuid
 
-from fastapi import HTTPException, UploadFile, status
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session as DbSession
 
 from app.core.config import get_settings
@@ -15,25 +15,32 @@ from app.models.entities import Template
 from app.repositories.template import TemplateRepository
 from app.schemas.auth import UserRead
 from app.schemas.template import (
+    TemplateConfirmUploadRequest,
     TemplateCreateRequest,
     TemplateFileUrlResponse,
+    TemplatePresignedUploadRequest,
+    TemplatePresignedUploadResponse,
     TemplateRead,
     TemplateUpdateRequest,
 )
 
 settings = get_settings()
 
-_ALLOWED_CONTENT_TYPES = {
-    "application/pdf",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "text/plain",
+_ALLOWED_EXTENSIONS = {
+    ".pdf",
+    ".doc", ".docx",
+    ".xls", ".xlsx",
+    ".ppt", ".pptx",
+    ".hwp", ".hwpx",
+    ".txt", ".rtf", ".csv",
+    ".odt", ".ods", ".odp",
 }
-_ALLOWED_EXTENSIONS = {".pdf", ".docx", ".txt"}
 
 
 class TemplateService:
     def __init__(self, db: DbSession) -> None:
         self.repository = TemplateRepository(db)
+        self.s3_client = S3Client()
 
     def create(self, request: TemplateCreateRequest, current_user: UserRead) -> TemplateRead:
         template = Template(
@@ -46,40 +53,69 @@ class TemplateService:
         stored = self.repository.create(template)
         return TemplateRead.model_validate(stored)
 
-    def upload_file(
+    def create_presigned_upload(
         self,
-        file: UploadFile,
-        name: str | None,
-        template_type: TemplateType,
+        request: TemplatePresignedUploadRequest,
         current_user: UserRead,
-    ) -> TemplateRead:
-        filename = file.filename or "template"
-        ext = "." + filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-        content_type = file.content_type or "application/octet-stream"
-
-        if ext not in _ALLOWED_EXTENSIONS and content_type not in _ALLOWED_CONTENT_TYPES:
+    ) -> TemplatePresignedUploadResponse:
+        ext = os.path.splitext(request.file_name)[1].lower()
+        if ext not in _ALLOWED_EXTENSIONS:
             raise HTTPException(
                 status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-                detail="Only PDF, DOCX, and TXT files are supported.",
+                detail="Unsupported file type. Only document files are allowed (pdf, docx, xlsx, hwp, hwpx, etc.)",
             )
 
-        raw_bytes = file.file.read()
-
-        s3_key = f"templates/{current_user.id}/{uuid.uuid4()}/{filename}"
-        try:
-            S3Client().upload_bytes(settings.template_bucket, s3_key, raw_bytes, content_type)
-        except Exception:
-            s3_key = None
+        object_key = self._build_object_key(current_user.id, request.file_name)
+        display_name = (request.name or os.path.splitext(request.file_name)[0]).strip() or request.file_name
 
         template = Template(
             owner_id=current_user.id,
-            name=(name or filename).strip() or filename,
-            template_type=template_type,
-            file_s3_key=s3_key,
-            file_original_name=filename,
+            name=display_name,
+            template_type=request.template_type,
+            file_s3_key=object_key,
+            file_original_name=request.file_name,
+            status=TemplateStatus.PENDING_UPLOAD,
         )
-        stored = self.repository.create(template)
-        return TemplateRead.model_validate(stored)
+        created = self.repository.create(template)
+
+        upload_url = self.s3_client.generate_upload_url(
+            bucket=settings.template_bucket,
+            key=object_key,
+            content_type=request.content_type,
+        )
+        return TemplatePresignedUploadResponse(
+            template_id=created.id,
+            upload_url=upload_url,
+            object_key=object_key,
+            expires_in=settings.presigned_url_expire_seconds,
+        )
+
+    def confirm_upload(
+        self,
+        template_id: uuid.UUID,
+        request: TemplateConfirmUploadRequest,
+        current_user: UserRead,
+    ) -> TemplateRead:
+        template = self.repository.get_by_id(template_id)
+        if template is None or template.status == TemplateStatus.DELETED:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found.")
+        if template.status != TemplateStatus.PENDING_UPLOAD:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Template is not in PENDING_UPLOAD state.",
+            )
+        if current_user.role != UserRole.ADMIN and template.owner_id != current_user.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have access to this template.")
+
+        if not template.file_s3_key or not self.s3_client.object_exists(settings.template_bucket, template.file_s3_key):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Uploaded object not found in S3. Upload the file before confirming.",
+            )
+
+        template.status = TemplateStatus.ACTIVE
+        updated = self.repository.update(template)
+        return TemplateRead.model_validate(updated)
 
     def get_file_url(self, template_id: uuid.UUID, current_user: UserRead) -> TemplateFileUrlResponse:
         template = self._get_accessible(template_id, current_user)
@@ -88,7 +124,7 @@ class TemplateService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="No file is attached to this template.",
             )
-        url = S3Client().generate_download_url(settings.template_bucket, template.file_s3_key)
+        url = self.s3_client.generate_download_url(settings.template_bucket, template.file_s3_key)
         return TemplateFileUrlResponse(url=url)
 
     def list(self, current_user: UserRead) -> list[TemplateRead]:
@@ -139,7 +175,7 @@ class TemplateService:
 
     def _get_accessible(self, template_id: uuid.UUID, current_user: UserRead) -> Template:
         template = self.repository.get_by_id(template_id)
-        if template is None or template.status == TemplateStatus.DELETED:
+        if template is None or template.status in {TemplateStatus.DELETED, TemplateStatus.PENDING_UPLOAD}:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Template not found.",
@@ -152,3 +188,8 @@ class TemplateService:
                 detail="You do not have access to this template.",
             )
         return template
+
+    @staticmethod
+    def _build_object_key(owner_id: uuid.UUID, file_name: str) -> str:
+        safe_name = os.path.basename(file_name).replace(" ", "_")
+        return f"templates/{owner_id}/{uuid.uuid4().hex}/{safe_name}"

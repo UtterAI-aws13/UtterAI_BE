@@ -82,6 +82,7 @@ class TemplateType(StrEnum):
 
 
 class TemplateStatus(StrEnum):
+    PENDING_UPLOAD = "PENDING_UPLOAD"
     ACTIVE = "ACTIVE"
     DELETED = "DELETED"
 
