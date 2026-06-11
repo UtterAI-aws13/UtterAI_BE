@@ -203,8 +203,8 @@ SLP가 업로드한 리포트 템플릿 파일. 분석 요청 시 `template_id`�
 
 ### 구현 메모
 
-- 지원 파일 형식: `.pdf`, `.docx`, `.xlsx`, `.hwp`
-- HWP는 표준 MIME 타입이 없어 브라우저가 `application/octet-stream`을 보낼 수 있다. 파일 확장자를 기준으로 검증한다.
+- 지원 파일 형식: `.pdf`, `.doc/.docx`, `.xls/.xlsx`, `.ppt/.pptx`, `.hwp/.hwpx`, `.txt`, `.rtf`, `.csv`, `.odt/.ods/.odp`
+- HWP/HWPX는 표준 MIME 타입이 없어 브라우저가 `application/octet-stream`을 보낼 수 있다. 파일 확장자를 기준으로 검증한다.
 - `PENDING_UPLOAD` 상태 row는 목록 조회 및 상세 조회에서 노출되지 않는다.
 - presigned URL 업로드 흐름:
   1. `POST /templates/presigned-url` → `PENDING_UPLOAD` row 생성, presigned PUT URL 반환

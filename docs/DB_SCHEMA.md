@@ -243,7 +243,7 @@ PENDING → DOWNLOADING → PREPROCESSING
 
 **사용 흐름 (presigned URL):**
 1. `POST /templates/presigned-url` → `PENDING_UPLOAD` row 생성, S3 PUT presigned URL 반환
-2. 클라이언트 → S3 직접 PUT (`.pdf`, `.docx`, `.xlsx`, `.hwp`)
+2. 클라이언트 → S3 직접 PUT (`.pdf`, `.doc/.docx`, `.xls/.xlsx`, `.ppt/.pptx`, `.hwp/.hwpx`, `.txt`, `.rtf`, `.csv`, `.odt/.ods/.odp`)
 3. `POST /templates/{id}/confirm` → S3 object 존재 확인 후 `ACTIVE` 전환
 4. 분석 요청 시 `template_id` 지정 → AI 서버가 해당 파일을 참조해 리포트 생성
 
@@ -339,6 +339,6 @@ AI 서버 전용 DB. BE RDS와 분리된 PostgreSQL + pgvector.
 | `organizations` 제거 | 단일 기관 운영 | 불필요한 복잡도 제거 |
 | `audit_log` 제거 | 즉시 사용 계획 없음 | 필요 시 추후 추가 |
 | `model_used` VARCHAR | Bedrock 모델 ID 하나만 저장 | 파이프라인 전체 모델 버전은 AI 서버 책임 |
-| `templates` 파일 업로드 방식 | S3 presigned URL 방식 (PUT). 지원 형식: `.pdf`, `.docx`, `.xlsx`, `.hwp` | 서버 메모리를 거치지 않고 클라이언트가 S3에 직접 업로드. 구조화된 JSON 대신 SLP 소유 파일로 리포트 형식 지정 |
+| `templates` 파일 업로드 방식 | S3 presigned URL 방식 (PUT). 지원 형식: pdf, doc/docx, xls/xlsx, ppt/pptx, hwp/hwpx, txt, rtf, csv, odt/ods/odp | 서버 메모리를 거치지 않고 클라이언트가 S3에 직접 업로드. 구조화된 JSON 대신 SLP 소유 파일로 리포트 형식 지정 |
 | `VIEWER` 역할 제거 | 사용자 역할을 ADMIN/SLP만 유지 | 보호자는 앱에 직접 접근하지 않음 |
 | `patient_access_grants` 미구현 | 보호자 공유 권한 테이블 없음 | 보호자 공유는 리포트 파일 전달 또는 공유 링크로 처리 |
