@@ -31,3 +31,21 @@ class SQSClient:
             QueueUrl=settings.sqs_audio_preprocess_queue_url,
             MessageBody=json.dumps(payload),
         )
+
+    def send_report_job(self, job_id: str, session_id: str, transcript_id: str) -> None:
+        """Publish a report generation request to the report analysis queue.
+
+        Returns without sending when the queue URL is not configured.
+        """
+        if not settings.sqs_report_analysis_queue_url:
+            return
+
+        payload = {
+            "job_id": job_id,
+            "session_id": session_id,
+            "transcript_id": transcript_id,
+        }
+        self.client.send_message(
+            QueueUrl=settings.sqs_report_analysis_queue_url,
+            MessageBody=json.dumps(payload),
+        )

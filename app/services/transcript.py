@@ -5,12 +5,17 @@ from __future__ import annotations
 from datetime import UTC, datetime
 import uuid
 
+import logging
+
 from fastapi import HTTPException, status
 from opentelemetry import trace
+
+logger = logging.getLogger(__name__)
 from sqlalchemy.orm import Session as DbSession
 
 from app.core.enums import AnalysisJobStatus, SessionStatus, TranscriptStatus, UserRole
 from app.models.entities import Transcript, TranscriptSegment
+from app.infrastructure.sqs.client import SQSClient
 from app.repositories.analysis_job import AnalysisJobRepository
 from app.repositories.session import SessionRepository
 from app.repositories.transcript import TranscriptRepository
@@ -239,6 +244,20 @@ class TranscriptService:
         transcript.finalized_by = current_user.id
         transcript.finalized_at = datetime.now(UTC)
         updated = self.transcript_repository.update(transcript)
+
+        job = self.analysis_job_repository.get_by_id(transcript.job_id)
+        if job is None:
+            logger.warning(f"finalize: analysis_job not found for transcript {transcript_id}, SQS 발행 생략")
+        else:
+            try:
+                SQSClient().send_report_job(
+                    job_id=str(job.id),
+                    session_id=str(transcript.session_id),
+                    transcript_id=str(updated.id),
+                )
+                logger.info(f"finalize: report job SQS 발행 완료 job_id={job.id}")
+            except Exception as exc:
+                logger.error(f"finalize: SQS 발행 실패 job_id={job.id} error={exc}")
 
         return TranscriptFinalizeResponse(
             transcript_id=updated.id,

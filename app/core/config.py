@@ -51,6 +51,7 @@ class Settings(BaseSettings):
     presigned_url_expire_seconds: int = 900
 
     sqs_audio_preprocess_queue_url: str = ""
+    sqs_report_analysis_queue_url: str = ""
     public_api_base_url: str = "http://localhost:8000"
 
     otel_service_name: str = "backend"
