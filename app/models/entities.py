@@ -288,7 +288,7 @@ class Report(Base):
         Enum(ReportStatus, name="report_status"),
         nullable=False,
         default=ReportStatus.DRAFT,
-        server_default=ReportStatus.DRAFT.value,
+        server_default="DRAFT",
     )
     model_used: Mapped[str | None] = mapped_column(String(255), nullable=True)
     clinical_flags: Mapped[list | None] = mapped_column(JSONB, nullable=True)
