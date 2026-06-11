@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session as DbSession
 
 from app.core.config import get_settings
 from app.core.enums import AnalysisJobStatus, AudioFileStatus, SessionStatus, UserRole
-from app.infrastructure.ai_client.client import AIClient
+from app.infrastructure.sqs.client import SQSClient
 from app.models.entities import AnalysisJob
 from app.observability.metrics import (
     record_analysis_job_created,
@@ -51,7 +51,7 @@ class AnalysisJobService:
         self.audio_repository = AudioFileRepository(db)
         self.session_repository = SessionRepository(db)
         self.template_repository = TemplateRepository(db)
-        self.ai_client = AIClient()
+        self.sqs_client = SQSClient()
 
     def create(self, request: AnalysisJobCreateRequest, current_user: UserRead) -> AnalysisJobRead:
         tracer = trace.get_tracer(__name__)
@@ -112,33 +112,28 @@ class AnalysisJobService:
             self.session_repository.update(session)
 
             dispatch_payload = {
-                "jobId": str(created_job.id),
-                "sessionId": str(created_job.session_id),
-                "audioFileId": str(created_job.audio_file_id),
-                "audioObjectKey": audio_file.object_key,
-                "progressCallbackUrl": (
-                    f"{settings.public_api_base_url.rstrip('/')}"
-                    f"/api/v1/internal/analysis-jobs/{created_job.id}/progress"
-                ),
+                "job_id": str(created_job.id),
+                "session_id": str(created_job.session_id),
+                "audio_file_id": str(created_job.audio_file_id),
+                "user_id": str(current_user.id),
+                "audio": {
+                    "bucket": settings.raw_audio_bucket,
+                    "key": audio_file.object_key,
+                    "content_type": audio_file.content_type or "audio/wav",
+                },
+                "options": {},
+                "requested_at": now.isoformat(),
             }
             if request.template_id is not None:
-                dispatch_payload["templateId"] = str(request.template_id)
+                dispatch_payload["options"]["template_id"] = str(request.template_id)
 
             try:
-                dispatch_result = self.ai_client.dispatch_analysis_job(dispatch_payload)
+                self.sqs_client.send_analysis_job(dispatch_payload)
             except Exception:
                 record_analysis_job_dispatch_failed()
                 raise
 
-            if dispatch_result is not None:
-                record_analysis_job_dispatched()
-                created_job.status = AnalysisJobStatus.DOWNLOADING
-                created_job = self.analysis_repository.update(created_job)
-                session.status = SessionStatus.ANALYSIS_PROCESSING
-                self.session_repository.update(session)
-            else:
-                span.set_attribute("analysis.job.dispatch.skipped", True)
-
+            record_analysis_job_dispatched()
             return AnalysisJobRead.model_validate(created_job)
 
     def list(

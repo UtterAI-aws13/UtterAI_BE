@@ -50,8 +50,7 @@ class Settings(BaseSettings):
     template_bucket: str = "utterai-templates"
     presigned_url_expire_seconds: int = 900
 
-    ai_service_base_url: str = ""
-    ai_service_analysis_path: str = "/internal/ai/analysis-jobs"
+    sqs_audio_preprocess_queue_url: str = ""
     public_api_base_url: str = "http://localhost:8000"
 
     otel_service_name: str = "backend"

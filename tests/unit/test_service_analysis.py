@@ -82,14 +82,14 @@ def service(db):
          patch("app.services.analysis.AudioFileRepository") as MockAudio, \
          patch("app.services.analysis.SessionRepository") as MockSession, \
          patch("app.services.analysis.TemplateRepository") as MockTemplate, \
-         patch("app.services.analysis.AIClient") as MockAI:
+         patch("app.services.analysis.SQSClient") as MockSQS:
         svc = AnalysisJobService(db)
         svc.analysis_repository = MockJob.return_value
         svc.audio_repository = MockAudio.return_value
         svc.session_repository = MockSession.return_value
         svc.template_repository = MockTemplate.return_value
-        svc.ai_client = MockAI.return_value
-        svc.ai_client.dispatch_analysis_job.return_value = None
+        svc.sqs_client = MockSQS.return_value
+        svc.sqs_client.send_analysis_job.return_value = None
         yield svc
 
 

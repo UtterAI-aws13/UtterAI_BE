@@ -31,6 +31,15 @@ def list_patients(
     return PatientService(db).list(current_user)
 
 
+@router.get("/by-ref/{patient_ref_id}", response_model=PatientRead)
+def get_patient_by_ref_id(
+    patient_ref_id: uuid.UUID,
+    current_user: UserRead = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> PatientRead:
+    return PatientService(db).get_by_ref_id(patient_ref_id, current_user)
+
+
 @router.get("/{patient_id}", response_model=PatientRead)
 def get_patient(
     patient_id: uuid.UUID,

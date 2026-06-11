@@ -53,6 +53,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 구현됨 | 환자 목록 조회 | 치료사, 관리자 | GET | `/api/v1/patients` | - | - | 치료사는 본인 소유 환자만, 관리자는 전체 조회 |
 | 구현됨 | 환자 상세 조회 | 치료사, 관리자 | GET | `/api/v1/patients/{patientId}` | - | - | 환자 기본 정보 조회 |
+| 구현됨 | patient_ref_id로 환자 조회 | 치료사, 관리자 | GET | `/api/v1/patients/by-ref/{patientRefId}` | - | - | 세션의 `patient_ref_id` 기준으로 환자 정보 조회 |
 | 구현됨 | 환자 등록 | 치료사, 관리자 | POST | `/api/v1/patients` | - | `name`, `birth_date`, `gender`, `memo`, `slp_id(optional, admin only)` | 환자 정보 등록 |
 | 구현됨 | 환자 정보 수정 | 치료사, 관리자 | PATCH | `/api/v1/patients/{patientId}` | - | `name`, `birth_date`, `gender`, `memo` | 환자 정보 수정 |
 | 구현됨 | 환자 삭제 | 치료사, 관리자 | DELETE | `/api/v1/patients/{patientId}` | - | - | soft delete 처리 |
@@ -88,14 +89,14 @@
 | 상태 | 기능 | 사용자 | Method | URL | Query Param | Request Body | 설명 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 구현됨 | 음성 업로드 URL 발급 | 치료사, 관리자 | POST | `/api/v1/audio-files/presigned-url` | - | `file_name`, `content_type`, `session_id`, `file_size(optional)` | pending audio row 생성 후 S3 업로드용 presigned URL 발급 |
-| 구현됨 | 음성 파일 등록 | 치료사, 관리자 | POST | `/api/v1/audio-files` | - | `session_id`, `s3_key`, `duration_seconds(optional)` | 업로드 완료된 음성 메타데이터 확정 |
+| 구현됨 | 음성 파일 등록 | 치료사, 관리자 | POST | `/api/v1/audio-files` | - | `session_id`, `object_key`, `actual_size_bytes(optional)` | 업로드 완료된 음성 메타데이터 확정 |
 | 구현됨 | 음성 파일 조회 | 치료사, 관리자 | GET | `/api/v1/audio-files/{audioFileId}` | - | - | 음성 파일 메타데이터 조회 |
 | 구현됨 | 음성 파일 삭제 | 치료사, 관리자 | DELETE | `/api/v1/audio-files/{audioFileId}` | - | - | 음성 파일 soft delete |
 
 ### 구현 메모
 
-- presigned URL 발급 시 서버가 `audio_files`의 `PENDING` row를 먼저 만든다.
-- 업로드 완료 API는 `s3_key` 기준으로 row를 찾아 `UPLOADED`로 상태 전이한다.
+- presigned URL 발급 시 서버가 `audio_files`의 `PENDING_UPLOAD` row를 먼저 만든다.
+- 업로드 완료 API는 `object_key` 기준으로 row를 찾아 `UPLOADED`로 상태 전이한다.
 - 업로드 완료 시 세션 상태는 `AUDIO_UPLOADED`로 변경된다.
 
 ---
@@ -104,7 +105,7 @@
 
 | 상태 | 기능 | 사용자 | Method | URL | Query Param | Request Body | 설명 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 구현됨 | AI 분석 요청 | 치료사, 관리자 | POST | `/api/v1/analysis-jobs` | - | `session_id`, `audio_file_id`, `analysis_template(optional)` | AI 분석 작업 생성 |
+| 구현됨 | AI 분석 요청 | 치료사, 관리자 | POST | `/api/v1/analysis-jobs` | - | `session_id`, `audio_file_id`, `template_id(optional)` | AI 분석 작업 생성 |
 | 구현됨 | 분석 작업 목록 | 치료사, 관리자 | GET | `/api/v1/analysis-jobs` | `session_id(optional)`, `status(optional)` | - | 분석 작업 목록 조회 |
 | 구현됨 | 분석 작업 상태 조회 | 치료사, 관리자 | GET | `/api/v1/analysis-jobs/{jobId}` | - | - | 분석 진행 상태 조회 |
 | 구현됨 | 분석 작업 취소 | 치료사, 관리자 | PATCH | `/api/v1/analysis-jobs/{jobId}/cancel` | - | - | active 분석 작업 취소 |
@@ -124,52 +125,41 @@
 
 | 상태 | 기능 | 사용자 | Method | URL | Query Param | Request Body | 설명 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 구현됨 | 내부 분석 결과 Callback | 내부 AI 시스템 | POST | `/api/v1/internal/analysis-results/callback` | - | 결과 payload | 분석 결과와 transcript/speaker/utterance 저장 |
-| 구현됨 | 전사 결과 조회 | 치료사, 관리자 | GET | `/api/v1/transcripts/{resultId}` | - | - | analysis result 기준 전사 결과 조회 |
+| 구현됨 | 내부 분석 결과 Callback | 내부 AI 시스템 | POST | `/api/v1/internal/analysis-results/callback` | - | 결과 payload | 분석 결과와 transcript/transcript_segments 저장 |
+| 구현됨 | 전사 결과 조회 | 치료사, 관리자 | GET | `/api/v1/transcripts/{transcriptId}` | - | - | transcript_id 기준 전사 결과 조회 |
 | 구현됨 | 세션 전사 결과 조회 | 치료사, 관리자 | GET | `/api/v1/sessions/{sessionId}/transcript` | - | - | 특정 세션의 전사 결과 조회 |
-| 구현됨 | 전사 문장 수정 | 치료사, 관리자 | PATCH | `/api/v1/transcripts/{resultId}/segments/{segmentId}` | - | `text`, `speaker_role`, `edit_reason(optional)` | 특정 발화 구간 수정 |
-| 구현됨 | 전사 결과 일괄 수정 | 치료사, 관리자 | PATCH | `/api/v1/transcripts/{resultId}/segments` | - | `segments` | 여러 발화 구간 일괄 수정 |
-| 구현됨 | 전사 구간 추가 | 치료사, 관리자 | POST | `/api/v1/transcripts/{resultId}/segments` | - | `speaker_label`, `speaker_role(optional)`, `start_time`, `end_time`, `text`, `edit_reason(optional)` | 누락된 구간 추가 |
-| 구현됨 | 전사 구간 삭제 | 치료사, 관리자 | DELETE | `/api/v1/transcripts/{resultId}/segments/{segmentId}` | - | - | 잘못 생성된 구간 삭제 |
-| 구현됨 | 전사 결과 확정 | 치료사, 관리자 | PATCH | `/api/v1/transcripts/{resultId}/confirm` | - | - | 수정 완료 전사본 확정 |
+| 구현됨 | 전사 세그먼트 목록 조회 | 치료사, 관리자 | GET | `/api/v1/transcripts/{transcriptId}/segments` | - | - | 전사 세그먼트 목록 조회 |
+| 구현됨 | 전사 세그먼트 수정 | 치료사, 관리자 | PATCH | `/api/v1/transcripts/{transcriptId}/segments/{segmentId}` | - | `text`, `speaker_role` | 특정 발화 구간 수정 |
+| 구현됨 | 전사 세그먼트 일괄 수정 | 치료사, 관리자 | PATCH | `/api/v1/transcripts/{transcriptId}/segments` | - | `segments` | 여러 발화 구간 일괄 수정 |
+| 구현됨 | 전사 결과 확정 | 치료사, 관리자 | POST | `/api/v1/transcripts/{transcriptId}/finalize` | - | - | 수정 완료 전사본 확정 |
 
 ### 구현 메모
 
-- transcript는 AI result callback 이후 생성된다.
-- 저장 구조는 `analysis_results -> speakers -> utterances -> utterance_edit_history` 흐름이다.
-- 수정 시 `original_text`는 유지하고, `edited_text`와 수정 이력을 별도로 관리한다.
+- transcript draft는 ML GPU Worker가 alignment 완료 후 `transcripts` + `transcript_segments` 테이블에 직접 저장한다. (SQS 파이프라인 내부 처리, BE callback 불필요)
+- BE `POST /internal/analysis-results/callback`은 dev/test용 수동 ingest 경로로만 사용된다.
+- 저장 구조는 `transcripts (헤더) → transcript_segments (발화 단위)` 이다.
+- 수정 시 `original_text`는 유지하고 `text`를 덮어쓴다. `is_edited`, `edited_by`, `edited_at`으로 이력을 추적한다.
 
 ---
 
 ## 8. Analysis Results
 
+> 별도 `analysis_results` 테이블은 현재 스키마에 존재하지 않는다. 분석 결과는 `transcripts`, `transcript_segments`, `language_metrics`, `reports` 테이블로 분리 보관된다. 아래 엔드포인트는 미구현이며 향후 필요 시 추가한다.
+
 | 상태 | 기능 | 사용자 | Method | URL | Query Param | Request Body | 설명 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 구현됨 | 분석 결과 조회 | 치료사, 관리자 | GET | `/api/v1/analysis-results/{resultId}` | - | - | 전체 분석 결과 조회 |
-| 구현됨 | 세션별 분석 결과 조회 | 치료사, 관리자 | GET | `/api/v1/sessions/{sessionId}/analysis-results` | - | - | 세션별 분석 결과 조회 |
-| 구현됨 | 전사 결과 조회 | 치료사, 관리자 | GET | `/api/v1/analysis-results/{resultId}/transcripts` | - | - | analysis result 네임스페이스에서 STT 전사 결과를 조회한다. |
-| 구현됨 | 화자 분리 결과 조회 | 치료사, 관리자 | GET | `/api/v1/analysis-results/{resultId}/speakers` | - | - | 화자 라벨, 역할, 발화 수를 조회한다. |
-| 구현됨 | 언어 지표 조회 | 치료사, 관리자 | GET | `/api/v1/analysis-results/{resultId}/metrics` | - | - | 저장된 metrics payload 조회 |
+| 미구현 | 세션별 분석 결과 조회 | 치료사, 관리자 | GET | `/api/v1/sessions/{sessionId}/analysis-results` | - | - | 세션별 분석 결과 요약 조회 |
+| 미구현 | 언어 지표 조회 | 치료사, 관리자 | GET | `/api/v1/sessions/{sessionId}/language-metrics` | - | - | `language_metrics` 테이블 조회 |
 
 ---
 
 ## 9. SOAP Notes
 
+> 현재 `soap_notes` 테이블 및 관련 엔드포인트는 미구현이다. SOAP Note 초안은 LLM GPU Worker가 `reports` + `report_segments` 테이블에 직접 저장하는 방식으로 처리된다.
+
 | 상태 | 기능 | 사용자 | Method | URL | Query Param | Request Body | 설명 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 구현됨 | SOAP Note 초안 생성 | 치료사, 관리자 | POST | `/api/v1/soap-notes/generate` | - | `sessionId`, `transcriptId`, `clinicalAnalysisJobId(optional)` | 분석 결과 기반 초안 생성 |
-| 구현됨 | SOAP Note 목록 조회 | 치료사, 관리자 | GET | `/api/v1/soap-notes` | `sessionId(optional)`, `patientId(optional)` | - | SOAP Note 목록 조회 |
-| 구현됨 | SOAP Note 상세 조회 | 치료사, 관리자 | GET | `/api/v1/soap-notes/{noteId}` | - | - | SOAP Note 상세 조회 |
-| 구현됨 | SOAP Note 수정 | 치료사, 관리자 | PATCH | `/api/v1/soap-notes/{noteId}` | - | `subjective`, `objective`, `assessment`, `plan` | mutable SOAP Note 수정 |
-| 구현됨 | SOAP Note 저장 | 치료사, 관리자 | PATCH | `/api/v1/soap-notes/{noteId}/save` | - | - | 수정본 저장 |
-| 구현됨 | SOAP Note 확정 | 치료사, 관리자 | PATCH | `/api/v1/soap-notes/{noteId}/finalize` | - | - | 최종 확정 |
-| 구현됨 | SOAP Note 삭제 | 치료사, 관리자 | DELETE | `/api/v1/soap-notes/{noteId}` | - | - | SOAP Note soft delete |
-
-### 구현 메모
-
-- SOAP draft 생성 전 transcript 전체가 `confirmed` 상태여야 한다.
-- 현재 draft 생성은 backend-local 텍스트 조합 방식이며, 이후 LLM 기반 고도화가 가능하다.
-- `FINALIZED` 상태의 SOAP Note는 수정할 수 없다.
+| 미구현 | SOAP Note 초안 생성 | 치료사, 관리자 | POST | `/api/v1/soap-notes/generate` | - | - | 별도 BE 엔드포인트 없이 LLM Worker가 직접 저장 |
 
 ---
 
@@ -177,15 +167,19 @@
 
 | 상태 | 기능 | 사용자 | Method | URL | Query Param | Request Body | 설명 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 구현됨 | 리포트 생성 | 치료사, 관리자 | POST | `/api/v1/reports` | - | `sessionId`, `resultId`, `templateType` | finalized SOAP Note와 분석 결과를 기준으로 리포트를 생성한다. |
-| 구현됨 | 리포트 목록 조회 | 치료사, 관리자 | GET | `/api/v1/reports` | `patientId(optional)` | - | 현재 사용자에게 보이는 리포트 목록을 조회한다. |
+| 구현됨 | 리포트 목록 조회 | 치료사, 관리자 | GET | `/api/v1/reports` | `session_id(optional)`, `patient_ref_id(optional)` | - | 현재 사용자에게 보이는 리포트 목록을 조회한다. |
 | 구현됨 | 리포트 상세 조회 | 치료사, 관리자 | GET | `/api/v1/reports/{reportId}` | - | - | 리포트 본문과 메타데이터를 조회한다. |
-| 구현됨 | 리포트 수정 | 치료사, 관리자 | PATCH | `/api/v1/reports/{reportId}` | - | `title`, `content`, `memo` | 생성된 리포트의 제목, 본문, 메모를 수동 수정한다. |
-| 구현됨 | 리포트 다운로드 | 치료사, 관리자 | GET | `/api/v1/reports/{reportId}/download` | - | - | MVP에서는 텍스트 첨부파일 다운로드를 제공하고 PDF 렌더링은 후속 작업으로 남긴다. |
+| 구현됨 | 리포트 세그먼트 목록 | 치료사, 관리자 | GET | `/api/v1/reports/{reportId}/segments` | - | - | SOAP 섹션 단위 세그먼트 목록 조회 |
+| 구현됨 | 리포트 세그먼트 수정 | 치료사, 관리자 | PATCH | `/api/v1/reports/{reportId}/segments/{segmentId}` | - | `ai_content`, `content` 등 | 개별 SOAP 섹션 내용 수정 |
+| 구현됨 | 리포트 상태 변경 | 치료사, 관리자 | PATCH | `/api/v1/reports/{reportId}/status` | - | `status` | 리포트 상태 전이 (`DRAFT` → `REVIEWING` → `APPROVED` → `FINALIZED`) |
+| 구현됨 | 세션별 리포트 목록 | 치료사, 관리자 | GET | `/api/v1/sessions/{sessionId}/reports` | - | - | 세션에 연결된 리포트 목록 조회 |
+| 미구현 | 리포트 생성 | 치료사, 관리자 | POST | `/api/v1/reports` | - | - | LLM Worker가 직접 저장하므로 BE 생성 엔드포인트 없음 |
+| 미구현 | 리포트 다운로드 | 치료사, 관리자 | GET | `/api/v1/reports/{reportId}/download` | - | - | PDF 렌더링 후속 작업으로 남김 |
 
 ### 구현 메모
 
-- 리포트 생성 전 세션에는 최소 1개의 `FINALIZED` SOAP Note가 있어야 한다.
-- 리포트 생성이 완료되면 세션 상태를 `REPORT_READY`로 올린다.
-- soft delete된 리포트는 수정할 수 없다.
-- 보호자/공유 사용자 대상 리포트 공개 정책과 PDF 렌더링 파이프라인은 아직 구현하지 않았다.
+- 리포트 초안은 LLM GPU Worker가 S3 저장 후 `reports` + `report_segments` 테이블에 직접 기록한다.
+- 리포트 상태 전이: `DRAFT` → `REVIEWING` → `APPROVED` → `FINALIZED`. `DELETED`는 soft delete.
+- `report_segments`는 SOAP Note의 각 섹션(SUBJECTIVE / OBJECTIVE / ASSESSMENT / PLAN / CUSTOM)을 분리 저장한다.
+- `ai_content`(AI 원본, 불변)와 `content`(치료사 편집본)를 컬럼으로 분리한다.
+- 보호자/공유 사용자 대상 리포트 공개 정책과 PDF 렌더링은 미구현이다.
