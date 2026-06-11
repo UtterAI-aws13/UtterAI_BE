@@ -110,3 +110,19 @@ jobs:
           docker push "$IMAGE_URI"
 
           echo "IMAGE_URI=$IMAGE_URI"
+
+      - name: Dispatch GitOps image update
+        env:
+          GH_TOKEN: ${{ secrets.INFRA_REPO_DISPATCH_TOKEN }}
+          TARGET_ENV: ${{ needs.prepare.outputs.target_env }}
+          IMAGE_TAG: ${{ needs.prepare.outputs.image_tag }}
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
+        run: |
+          gh api repos/UtterAI-aws13/UtterAI_Infra/dispatches \
+            --method POST \
+            -f event_type=backend-image-pushed \
+            -f "client_payload[target_env]=$TARGET_ENV" \
+            -f "client_payload[image_tag]=$IMAGE_TAG" \
+            -f "client_payload[ecr_registry]=$ECR_REGISTRY" \
+            -f "client_payload[ecr_repository]=$ECR_REPOSITORY"
