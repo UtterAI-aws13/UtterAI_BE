@@ -26,11 +26,15 @@ from app.schemas.template import (
 
 settings = get_settings()
 
-_ALLOWED_EXTENSIONS = {".pdf", ".docx", ".xlsx", ".hwp"}
-
-# HWP has no standardised MIME type; browsers often send application/octet-stream.
-# Validation is therefore done on extension only — content_type is accepted as-is.
-_HWP_EXTENSION = ".hwp"
+_ALLOWED_EXTENSIONS = {
+    ".pdf",
+    ".doc", ".docx",
+    ".xls", ".xlsx",
+    ".ppt", ".pptx",
+    ".hwp", ".hwpx",
+    ".txt", ".rtf", ".csv",
+    ".odt", ".ods", ".odp",
+}
 
 
 class TemplateService:
@@ -58,7 +62,7 @@ class TemplateService:
         if ext not in _ALLOWED_EXTENSIONS:
             raise HTTPException(
                 status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-                detail=f"Unsupported file type. Allowed: {', '.join(sorted(_ALLOWED_EXTENSIONS))}",
+                detail="Unsupported file type. Only document files are allowed (pdf, docx, xlsx, hwp, hwpx, etc.)",
             )
 
         object_key = self._build_object_key(current_user.id, request.file_name)
