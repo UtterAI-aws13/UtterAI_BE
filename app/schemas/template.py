@@ -22,6 +22,24 @@ class TemplateUpdateRequest(BaseModel):
     sections_json: dict[str, Any] | None = None
 
 
+class TemplatePresignedUploadRequest(BaseModel):
+    file_name: str = Field(min_length=1, max_length=500)
+    content_type: str = Field(min_length=1, max_length=255)
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    template_type: TemplateType = TemplateType.SOAP_NOTE
+
+
+class TemplatePresignedUploadResponse(BaseModel):
+    template_id: uuid.UUID
+    upload_url: str
+    object_key: str
+    expires_in: int
+
+
+class TemplateConfirmUploadRequest(BaseModel):
+    actual_size_bytes: int | None = None
+
+
 class TemplateRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

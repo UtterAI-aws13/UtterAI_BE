@@ -2,7 +2,7 @@
 
 > **기준**: `entities.py` 기반 (`app/models/entities.py`)  
 > **DB**: PostgreSQL (RDS) — BE 전용 (AI DB는 별도 `rag_chunks` 테이블)  
-> **마지막 마이그레이션**: `20260610_0013_remove_approval_history` (approval_history 테이블 제거)
+> **마지막 마이그레이션**: `8a93ce2da371_add_pending_upload_to_template_status` (template_status에 PENDING_UPLOAD 추가)
 
 ---
 
@@ -237,11 +237,15 @@ PENDING → DOWNLOADING → PREPROCESSING
 | `file_original_name` | VARCHAR(500) | nullable | 업로드 원본 파일명 |
 | `is_system` | BOOLEAN | NOT NULL, default false | 시스템 기본 제공 여부 (SLP 소유 아님) |
 | `use_count` | INTEGER | NOT NULL, default 0 | 분석 요청에 사용된 횟수 |
-| `status` | ENUM(template_status) | NOT NULL, default `ACTIVE` | `ACTIVE`, `DELETED` |
+| `status` | ENUM(template_status) | NOT NULL, default `ACTIVE` | `PENDING_UPLOAD`, `ACTIVE`, `DELETED` |
 | `created_at` | TIMESTAMPTZ | NOT NULL, server_default | |
 | `updated_at` | TIMESTAMPTZ | NOT NULL, server_default | |
 
-**사용 흐름**: SLP가 파일 업로드 → S3 저장 후 `file_s3_key` 기록 → 분석 요청 시 `template_id` 지정 → AI 서버가 해당 파일을 참조해 리포트 생성
+**사용 흐름 (presigned URL):**
+1. `POST /templates/presigned-url` → `PENDING_UPLOAD` row 생성, S3 PUT presigned URL 반환
+2. 클라이언트 → S3 직접 PUT (`.pdf`, `.docx`, `.xlsx`, `.hwp`)
+3. `POST /templates/{id}/confirm` → S3 object 존재 확인 후 `ACTIVE` 전환
+4. 분석 요청 시 `template_id` 지정 → AI 서버가 해당 파일을 참조해 리포트 생성
 
 ---
 
@@ -316,7 +320,7 @@ AI 서버 전용 DB. BE RDS와 분리된 PostgreSQL + pgvector.
 | `transcript_status` | `DRAFT`, `EDITING`, `REVIEWED`, `FINALIZED` |
 | `template_type` | `SOAP_NOTE`, `CUSTOM` |
 | `patient_status` | `ACTIVE`, `DELETED` |
-| `template_status` | `ACTIVE`, `DELETED` |
+| `template_status` | `PENDING_UPLOAD`, `ACTIVE`, `DELETED` |
 | `report_status` | `DRAFT`, `REVIEWING`, `APPROVED`, `FINALIZED`, `DELETED` |
 | `report_segment_type` | `SUBJECTIVE`, `OBJECTIVE`, `ASSESSMENT`, `PLAN`, `CUSTOM` |
 
@@ -335,6 +339,6 @@ AI 서버 전용 DB. BE RDS와 분리된 PostgreSQL + pgvector.
 | `organizations` 제거 | 단일 기관 운영 | 불필요한 복잡도 제거 |
 | `audit_log` 제거 | 즉시 사용 계획 없음 | 필요 시 추후 추가 |
 | `model_used` VARCHAR | Bedrock 모델 ID 하나만 저장 | 파이프라인 전체 모델 버전은 AI 서버 책임 |
-| `templates` 파일 업로드 방식 | SLP가 직접 파일 업로드, AI가 참조 | 구조화된 JSON 대신 SLP 소유 파일로 리포트 형식 지정 |
+| `templates` 파일 업로드 방식 | S3 presigned URL 방식 (PUT). 지원 형식: `.pdf`, `.docx`, `.xlsx`, `.hwp` | 서버 메모리를 거치지 않고 클라이언트가 S3에 직접 업로드. 구조화된 JSON 대신 SLP 소유 파일로 리포트 형식 지정 |
 | `VIEWER` 역할 제거 | 사용자 역할을 ADMIN/SLP만 유지 | 보호자는 앱에 직접 접근하지 않음 |
 | `patient_access_grants` 미구현 | 보호자 공유 권한 테이블 없음 | 보호자 공유는 리포트 파일 전달 또는 공유 링크로 처리 |

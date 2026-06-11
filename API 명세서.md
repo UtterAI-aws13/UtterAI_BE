@@ -183,3 +183,30 @@
 - `report_segments`는 SOAP Note의 각 섹션(SUBJECTIVE / OBJECTIVE / ASSESSMENT / PLAN / CUSTOM)을 분리 저장한다.
 - `ai_content`(AI 원본, 불변)와 `content`(치료사 편집본)를 컬럼으로 분리한다.
 - 보호자/공유 사용자 대상 리포트 공개 정책과 PDF 렌더링은 미구현이다.
+
+---
+
+## 11. Templates
+
+SLP가 업로드한 리포트 템플릿 파일. 분석 요청 시 `template_id`로 지정하면 AI가 해당 파일을 참조해 리포트를 생성한다.
+
+| 상태 | 기능 | 사용자 | Method | URL | Query Param | Request Body | 설명 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 구현됨 | 템플릿 업로드 URL 발급 | 치료사, 관리자 | POST | `/api/v1/templates/presigned-url` | - | `file_name`, `content_type`, `name(optional)`, `template_type(optional)` | `PENDING_UPLOAD` row 생성 후 S3 업로드용 presigned URL 발급 |
+| 구현됨 | 템플릿 업로드 확인 | 치료사, 관리자 | POST | `/api/v1/templates/{templateId}/confirm` | - | `actual_size_bytes(optional)` | S3 object 존재 확인 후 `ACTIVE` 전환 |
+| 구현됨 | 템플릿 목록 조회 | 치료사, 관리자 | GET | `/api/v1/templates` | - | - | 본인 소유 + 시스템 템플릿 조회. 관리자는 전체 조회 |
+| 구현됨 | 템플릿 상세 조회 | 치료사, 관리자 | GET | `/api/v1/templates/{templateId}` | - | - | 템플릿 메타데이터 조회 |
+| 구현됨 | 템플릿 파일 URL 발급 | 치료사, 관리자 | GET | `/api/v1/templates/{templateId}/file` | - | - | 파일 다운로드용 presigned GET URL 반환 |
+| 구현됨 | 템플릿 메타데이터 생성 | 치료사, 관리자 | POST | `/api/v1/templates` | - | `name`, `template_type(optional)`, `description(optional)`, `sections_json(optional)` | 파일 없이 구조만 지정하는 템플릿 생성 |
+| 구현됨 | 템플릿 수정 | 치료사, 관리자 | PATCH | `/api/v1/templates/{templateId}` | - | `name`, `description`, `sections_json` | 템플릿 메타데이터 수정. 시스템 템플릿은 수정 불가 |
+| 구현됨 | 템플릿 삭제 | 치료사, 관리자 | DELETE | `/api/v1/templates/{templateId}` | - | - | soft delete. 시스템 템플릿 및 타인 소유 템플릿 삭제 불가 |
+
+### 구현 메모
+
+- 지원 파일 형식: `.pdf`, `.docx`, `.xlsx`, `.hwp`
+- HWP는 표준 MIME 타입이 없어 브라우저가 `application/octet-stream`을 보낼 수 있다. 파일 확장자를 기준으로 검증한다.
+- `PENDING_UPLOAD` 상태 row는 목록 조회 및 상세 조회에서 노출되지 않는다.
+- presigned URL 업로드 흐름:
+  1. `POST /templates/presigned-url` → `PENDING_UPLOAD` row 생성, presigned PUT URL 반환
+  2. 클라이언트 → S3 직접 PUT
+  3. `POST /templates/{templateId}/confirm` → S3 object 존재 확인 후 `ACTIVE` 전환
