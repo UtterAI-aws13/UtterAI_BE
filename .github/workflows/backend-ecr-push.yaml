@@ -111,9 +111,19 @@ jobs:
 
           echo "IMAGE_URI=$IMAGE_URI"
 
+      - name: Create Infra GitHub App token
+        id: infra-app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.UTTERAI_GITOPS_APP_ID }}
+          private-key: ${{ secrets.UTTERAI_GITOPS_APP_PRIVATE_KEY }}
+          owner: UtterAI-aws13
+          repositories: UtterAI_Infra
+          permission-contents: write
+
       - name: Dispatch GitOps image update
         env:
-          GH_TOKEN: ${{ secrets.INFRA_REPO_DISPATCH_TOKEN }}
+          GH_TOKEN: ${{ steps.infra-app-token.outputs.token }}
           TARGET_ENV: ${{ needs.prepare.outputs.target_env }}
           IMAGE_TAG: ${{ needs.prepare.outputs.image_tag }}
           ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
