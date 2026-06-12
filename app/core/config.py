@@ -43,7 +43,9 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 14
 
     internal_callback_token: str = "change-me-internal-token"
-    internal_callback_hmac_secret: str = "change-me-hmac-secret"
+
+    ai_service_base_url: str = ""
+    ai_service_analysis_path: str = "/internal/ai/analysis-jobs"
 
     aws_region: str = "ap-northeast-2"
     raw_audio_bucket: str = "utterai-raw-audio"
@@ -52,7 +54,6 @@ class Settings(BaseSettings):
 
     sqs_audio_preprocess_queue_url: str = ""
     sqs_report_analysis_queue_url: str = ""
-    public_api_base_url: str = "http://localhost:8000"
 
     otel_service_name: str = "backend"
     otel_exporter_otlp_endpoint: str = "http://localhost:4318"
