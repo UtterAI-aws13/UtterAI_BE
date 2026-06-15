@@ -21,7 +21,7 @@ from app.services.report import ReportService
 router = APIRouter()
 
 
-@router.get("", response_model=list[ReportRead])
+@router.get("/", response_model=list[ReportRead])
 def list_reports(
     session_id: uuid.UUID | None = Query(default=None),
     patient_ref_id: uuid.UUID | None = Query(default=None),
