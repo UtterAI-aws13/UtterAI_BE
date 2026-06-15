@@ -14,7 +14,7 @@ from app.services.patient import PatientService
 router = APIRouter()
 
 
-@router.post("", response_model=PatientRead, status_code=201)
+@router.post("/", response_model=PatientRead, status_code=201)
 def create_patient(
     request: PatientCreateRequest,
     current_user: UserRead = Depends(get_current_user),
@@ -23,7 +23,7 @@ def create_patient(
     return PatientService(db).create(request, current_user)
 
 
-@router.get("", response_model=list[PatientRead])
+@router.get("/", response_model=list[PatientRead])
 def list_patients(
     current_user: UserRead = Depends(get_current_user),
     db: Session = Depends(get_db_session),

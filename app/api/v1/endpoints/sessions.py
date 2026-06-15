@@ -16,7 +16,7 @@ from app.services.session import SessionService
 router = APIRouter()
 
 
-@router.post("", response_model=SessionRead, status_code=201)
+@router.post("/", response_model=SessionRead, status_code=201)
 def create_session(
     request: SessionCreateRequest,
     current_user: UserRead = Depends(get_current_user),
@@ -26,7 +26,7 @@ def create_session(
     return service.create(request, current_user)
 
 
-@router.get("", response_model=list[SessionRead])
+@router.get("/", response_model=list[SessionRead])
 def list_sessions(
     patient_ref_id: uuid.UUID | None = Query(default=None),
     current_user: UserRead = Depends(get_current_user),

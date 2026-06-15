@@ -31,7 +31,7 @@ def create_presigned_upload(
     return service.create_presigned_upload(request, current_user)
 
 
-@router.post("", response_model=AudioFileRead)
+@router.post("/", response_model=AudioFileRead)
 def complete_upload(
     request: AudioFileCompleteRequest,
     current_user: UserRead = Depends(get_current_user),

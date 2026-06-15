@@ -22,7 +22,7 @@ from app.services.template import TemplateService
 router = APIRouter()
 
 
-@router.post("", response_model=TemplateRead, status_code=201)
+@router.post("/", response_model=TemplateRead, status_code=201)
 def create_template(
     request: TemplateCreateRequest,
     current_user: UserRead = Depends(get_current_user),
@@ -41,7 +41,7 @@ def create_presigned_upload(
     return TemplateService(db).create_presigned_upload(request, current_user)
 
 
-@router.get("", response_model=list[TemplateRead])
+@router.get("/", response_model=list[TemplateRead])
 def list_templates(
     current_user: UserRead = Depends(get_current_user),
     db: Session = Depends(get_db_session),

@@ -21,7 +21,7 @@ router = APIRouter()
 internal_router = APIRouter()
 
 
-@router.post("", response_model=AnalysisJobRead, status_code=201)
+@router.post("/", response_model=AnalysisJobRead, status_code=201)
 def create_analysis_job(
     request: AnalysisJobCreateRequest,
     current_user: UserRead = Depends(get_current_user),
@@ -33,7 +33,7 @@ def create_analysis_job(
     return service.create(request, current_user)
 
 
-@router.get("", response_model=list[AnalysisJobRead])
+@router.get("/", response_model=list[AnalysisJobRead])
 def list_analysis_jobs(
     session_id: uuid.UUID | None = Query(default=None),
     status_filter: AnalysisJobStatus | None = Query(default=None, alias="status"),
