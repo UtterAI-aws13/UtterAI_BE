@@ -49,7 +49,7 @@ class Settings(BaseSettings):
 
     aws_region: str = "ap-northeast-2"
     raw_audio_bucket: str = "utterai-raw-audio"
-    template_bucket: str = "utterai-dev-documents"
+    template_bucket: str = "utterai-dev-template"
     presigned_url_expire_seconds: int = 900
 
     sqs_audio_preprocess_queue_url: str = ""
