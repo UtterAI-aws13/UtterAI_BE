@@ -65,6 +65,17 @@ def initialize_observability() -> None:
         _INITIALIZED = True
         return
 
+    try:
+        _initialize_observability()
+    except Exception:  # pragma: no cover - observability must not block startup
+        _LOGGER.exception("Failed to initialize OpenTelemetry; observability disabled")
+    finally:
+        _INITIALIZED = True
+
+
+def _initialize_observability() -> None:
+    """Install OpenTelemetry providers and framework instrumentors."""
+
     from opentelemetry.instrumentation.botocore import BotocoreInstrumentor
     from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
     from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
@@ -98,8 +109,6 @@ def initialize_observability() -> None:
     except Exception:  # pragma: no cover - instrumentation should not fail startup
         _LOGGER.exception("Failed to instrument botocore")
 
-    _INITIALIZED = True
-
 
 def instrument_fastapi_app(app: FastAPI) -> None:
     """Attach FastAPI request spans to the application instance."""
@@ -107,10 +116,13 @@ def instrument_fastapi_app(app: FastAPI) -> None:
     if _running_under_pytest():
         return
 
-    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+    try:
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
-    initialize_observability()
-    FastAPIInstrumentor.instrument_app(app)
+        initialize_observability()
+        FastAPIInstrumentor.instrument_app(app, excluded_urls="health.*")
+    except Exception:  # pragma: no cover - instrumentation should not fail startup
+        _LOGGER.exception("Failed to instrument FastAPI; OTel tracing disabled")
 
 
 def get_tracer(name: str):
