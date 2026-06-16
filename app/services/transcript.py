@@ -256,6 +256,10 @@ class TranscriptService:
                     transcript_id=str(updated.id),
                 )
                 logger.info(f"finalize: report job SQS 발행 완료 job_id={job.id}")
+                session = self.session_repository.get_by_id(transcript.session_id)
+                if session is not None:
+                    session.status = SessionStatus.REPORT_GENERATING
+                    self.session_repository.update(session)
             except Exception as exc:
                 logger.error(f"finalize: SQS 발행 실패 job_id={job.id} error={exc}")
 
