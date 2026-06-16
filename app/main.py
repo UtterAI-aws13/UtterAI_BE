@@ -23,6 +23,7 @@ def create_application() -> FastAPI:
         version=settings.app_version,
         docs_url="/docs",
         redoc_url="/redoc",
+        redirect_slashes=False,
     )
 
     app.add_middleware(
