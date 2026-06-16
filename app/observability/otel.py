@@ -110,7 +110,10 @@ def instrument_fastapi_app(app: FastAPI) -> None:
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
     initialize_observability()
-    FastAPIInstrumentor.instrument_app(app)
+    try:
+        FastAPIInstrumentor.instrument_app(app, excluded_urls="health.*")
+    except Exception:
+        _LOGGER.exception("Failed to instrument FastAPI — OTel tracing disabled")
 
 
 def get_tracer(name: str):
