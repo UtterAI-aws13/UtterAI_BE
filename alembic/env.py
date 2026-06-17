@@ -47,7 +47,8 @@ def run_migrations_offline() -> None:
 def run_migrations_online() -> None:
     """Run migrations with a real database connection."""
 
-    connectable = create_engine(_db_url, poolclass=pool.NullPool)
+    connect_args = {} if settings.db_host in ("localhost", "127.0.0.1") else {"sslmode": "require"}
+    connectable = create_engine(_db_url, poolclass=pool.NullPool, connect_args=connect_args)
 
     with connectable.connect() as connection:
         context.configure(
