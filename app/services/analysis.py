@@ -131,6 +131,12 @@ class AnalysisJobService:
                 self.sqs_client.send_analysis_job(dispatch_payload)
             except Exception:
                 record_analysis_job_dispatch_failed()
+                # SQS 발행 실패 시 생성된 job을 FAILED로 표시하고 세션 상태를 되돌려
+                # 409 충돌 및 FE 무한 대기를 방지한다.
+                created_job.status = AnalysisJobStatus.FAILED
+                self.analysis_repository.update(created_job)
+                session.status = SessionStatus.AUDIO_UPLOADED
+                self.session_repository.update(session)
                 raise
 
             record_analysis_job_dispatched()
