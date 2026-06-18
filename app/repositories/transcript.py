@@ -29,6 +29,7 @@ class TranscriptRepository:
             select(Transcript)
             .where(Transcript.session_id == session_id)
             .order_by(Transcript.created_at.desc())
+            .limit(1)
         )
         return self.db.execute(statement).scalar_one_or_none()
 
