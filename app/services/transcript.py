@@ -240,6 +240,12 @@ class TranscriptService:
             )
         self._get_accessible_session(transcript.session_id, current_user)
 
+        if transcript.status == TranscriptStatus.FINALIZED:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="이미 확정된 전사입니다.",
+            )
+
         transcript.status = TranscriptStatus.FINALIZED
         transcript.finalized_by = current_user.id
         transcript.finalized_at = datetime.now(UTC)
@@ -262,6 +268,11 @@ class TranscriptService:
                     self.session_repository.update(session)
             except Exception as exc:
                 logger.error(f"finalize: SQS 발행 실패 job_id={job.id} error={exc}")
+                # SQS 발행 실패를 호출자(FE)에 알려 무한 폴링을 방지한다.
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail="리포트 생성 요청에 실패했습니다. 잠시 후 다시 시도해주세요.",
+                ) from exc
 
         return TranscriptFinalizeResponse(
             transcript_id=updated.id,
