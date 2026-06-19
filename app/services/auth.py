@@ -20,6 +20,8 @@ from app.repositories.user import UserRepository
 from app.schemas.auth import (
     LoginRequest,
     LogoutResponse,
+    PasswordChangeRequest,
+    ProfileUpdateRequest,
     RefreshRequest,
     SignupRequest,
     TokenResponse,
@@ -136,6 +138,44 @@ class AuthService:
         return LogoutResponse(
             revoked_sessions=revoked_sessions,
             message="Refresh tokens revoked successfully.",
+        )
+
+    def update_profile(self, request: ProfileUpdateRequest, current_user: UserRead) -> UserRead:
+        """Update the authenticated user's display name."""
+
+        user = self.repository.get_by_id(current_user.id)
+        if user is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+        user.name = request.name
+        updated = self.repository.update(user)
+        return UserRead.model_validate(updated)
+
+    def change_password(self, request: PasswordChangeRequest, current_user: UserRead) -> LogoutResponse:
+        """Verify the current password then replace it with the new hash.
+
+        All existing refresh tokens are revoked so other sessions are forced to
+        re-authenticate with the new credentials.
+        """
+
+        user = self.repository.get_by_id(current_user.id)
+        if user is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+        if not verify_password(request.current_password, user.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Current password is incorrect.",
+            )
+        if request.current_password == request.new_password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="New password must differ from the current password.",
+            )
+        user.password_hash = hash_password(request.new_password)
+        self.repository.update(user)
+        revoked = self.refresh_token_repository.revoke_all_for_user(current_user.id)
+        return LogoutResponse(
+            revoked_sessions=revoked,
+            message="Password changed. All sessions have been revoked.",
         )
 
     def _issue_token_pair(self, user: User) -> tuple[str, str]:

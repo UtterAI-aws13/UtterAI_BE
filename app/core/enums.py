@@ -1,99 +1,106 @@
-"""Domain enums shared by models, services, and validation rules."""
+"""Domain enums shared by models, services, and schemas."""
 
 from enum import StrEnum
 
 
 class UserRole(StrEnum):
-    """Supported application roles from the architecture document."""
-
     ADMIN = "ADMIN"
-    THERAPIST = "THERAPIST"
-    GUARDIAN = "GUARDIAN"
-    VIEWER = "VIEWER"
+    SLP = "SLP"
 
 
 class UserStatus(StrEnum):
-    """User lifecycle states. `INACTIVE` is used as soft delete/inactivation."""
-
     ACTIVE = "ACTIVE"
     INACTIVE = "INACTIVE"
 
 
-class ChildStatus(StrEnum):
-    """Child profile lifecycle states."""
-
+class PatientStatus(StrEnum):
     ACTIVE = "ACTIVE"
     DELETED = "DELETED"
 
 
 class SessionStatus(StrEnum):
-    """Session state machine values documented for upload and analysis flow."""
-
     CREATED = "CREATED"
     AUDIO_UPLOADING = "AUDIO_UPLOADING"
     AUDIO_UPLOADED = "AUDIO_UPLOADED"
     ANALYSIS_REQUESTED = "ANALYSIS_REQUESTED"
     ANALYSIS_PROCESSING = "ANALYSIS_PROCESSING"
     ANALYSIS_COMPLETED = "ANALYSIS_COMPLETED"
+    REPORT_GENERATING = "REPORT_GENERATING"
     REPORT_READY = "REPORT_READY"
     FAILED = "FAILED"
     DELETED = "DELETED"
 
 
 class AudioFileStatus(StrEnum):
-    """Audio file lifecycle states from presigned upload to soft delete."""
-
-    PENDING = "PENDING"
+    PENDING_UPLOAD = "PENDING_UPLOAD"
     UPLOADED = "UPLOADED"
+    FAILED = "FAILED"
+    EXPIRED = "EXPIRED"
     DELETED = "DELETED"
 
 
 class AnalysisJobStatus(StrEnum):
-    """Analysis job lifecycle states aligned with the architecture document."""
-
-    REQUESTED = "REQUESTED"
-    QUEUED = "QUEUED"
-    PROCESSING = "PROCESSING"
+    PENDING = "PENDING"
+    DOWNLOADING = "DOWNLOADING"
+    PREPROCESSING = "PREPROCESSING"
+    RUNNING_VAD = "RUNNING_VAD"
+    RUNNING_DIARIZATION = "RUNNING_DIARIZATION"
+    RUNNING_ASR = "RUNNING_ASR"
+    ALIGNING = "ALIGNING"
+    CALCULATING_METRICS = "CALCULATING_METRICS"
+    RUNNING_RAG = "RUNNING_RAG"
+    GENERATING_REPORT = "GENERATING_REPORT"
+    SAVING_RESULT = "SAVING_RESULT"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
+    RETRYING = "RETRYING"
     CANCELLED = "CANCELLED"
-    EXPIRED = "EXPIRED"
+
+
+class TargetSpeaker(StrEnum):
+    PATIENT = "PATIENT"
+    SLP = "SLP"
+    ALL = "ALL"
 
 
 class SpeakerRole(StrEnum):
-    """Speaker-role mapping values used in transcript views and editing."""
-
-    CHILD = "CHILD"
-    THERAPIST = "THERAPIST"
+    PATIENT = "PATIENT"
+    SLP = "SLP"
+    GUARDIAN = "GUARDIAN"
     UNKNOWN = "UNKNOWN"
 
 
-class AccessGrantLevel(StrEnum):
-    """Child sharing permission levels for guardians and viewers."""
-
-    VIEW_RESULT = "VIEW_RESULT"
-    VIEW_AND_DOWNLOAD = "VIEW_AND_DOWNLOAD"
-
-
-class AccessGrantStatus(StrEnum):
-    """Access grant lifecycle states."""
-
-    ACTIVE = "ACTIVE"
-    REVOKED = "REVOKED"
-
-
-class SoapNoteStatus(StrEnum):
-    """SOAP note lifecycle states from draft creation to final retention."""
-
+class TranscriptStatus(StrEnum):
     DRAFT = "DRAFT"
-    SAVED = "SAVED"
+    EDITING = "EDITING"
+    REVIEWED = "REVIEWED"
     FINALIZED = "FINALIZED"
+
+
+class TemplateType(StrEnum):
+    SOAP_NOTE = "SOAP_NOTE"
+    CUSTOM = "CUSTOM"
+
+
+class TemplateStatus(StrEnum):
+    PENDING_UPLOAD = "PENDING_UPLOAD"
+    ACTIVE = "ACTIVE"
     DELETED = "DELETED"
 
 
 class ReportStatus(StrEnum):
-    """Report lifecycle states kept intentionally small for the MVP."""
-
-    READY = "READY"
-    REGENERATING = "REGENERATING"
+    DRAFT = "DRAFT"
+    REVIEWING = "REVIEWING"
+    APPROVED = "APPROVED"
+    FINALIZED = "FINALIZED"
     DELETED = "DELETED"
+
+
+class ReportSegmentType(StrEnum):
+    SUBJECTIVE = "SUBJECTIVE"
+    OBJECTIVE = "OBJECTIVE"
+    ASSESSMENT = "ASSESSMENT"
+    PLAN = "PLAN"
+    CUSTOM = "CUSTOM"
+
+

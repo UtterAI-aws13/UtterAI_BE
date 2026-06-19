@@ -14,14 +14,11 @@ def upgrade() -> None:
     """Create the soap_notes table and its lifecycle enum."""
 
     soap_note_status = sa.Enum(
-        "DRAFT",
-        "SAVED",
-        "FINALIZED",
-        "DELETED",
-        name="soap_note_status",
+        "DRAFT", "SAVED", "FINALIZED", "DELETED",
+        name="soap_note_status", _create_events=False,
     )
     bind = op.get_bind()
-    soap_note_status.create(bind, checkfirst=True)
+    sa.Enum("DRAFT", "SAVED", "FINALIZED", "DELETED", name="soap_note_status").create(bind, checkfirst=True)
 
     op.create_table(
         "soap_notes",

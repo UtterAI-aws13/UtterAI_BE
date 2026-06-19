@@ -1,19 +1,23 @@
 """Application entrypoint for the UtterAI backend service."""
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 
-from app.api.router import api_router
 from app.core.config import get_settings
+from app.observability.otel import initialize_observability, instrument_fastapi_app
 
 
 def create_application() -> FastAPI:
-    """Create the FastAPI application with shared configuration and routers.
-
-    The factory pattern keeps startup wiring in one place and makes it easier
-    to reuse the same app configuration in tests later.
-    """
+    """Create the FastAPI application with shared configuration and routers."""
 
     settings = get_settings()
+    initialize_observability()
+
+    from app.api.router import api_router
+    from app.core.db import get_db_session
+
     app = FastAPI(
         title=settings.app_name,
         version=settings.app_version,
@@ -21,13 +25,31 @@ def create_application() -> FastAPI:
         redoc_url="/redoc",
     )
 
-    # Every versioned router is attached here so the entrypoint stays thin.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins,
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
     app.include_router(api_router, prefix=settings.api_prefix)
+    instrument_fastapi_app(app)
 
     @app.get("/health", tags=["health"])
     def health_check() -> dict[str, str]:
-        """Return a minimal liveness payload for load balancers and probes."""
+        return {"status": "ok"}
 
+    @app.get("/health/live", tags=["health"])
+    def health_live() -> dict[str, str]:
+        return {"status": "ok"}
+
+    @app.get("/health/ready", tags=["health"])
+    def health_ready(db: Session = Depends(get_db_session)) -> dict[str, str]:
+        try:
+            db.execute(text("SELECT 1"))
+        except Exception:
+            raise HTTPException(status_code=503, detail="database unavailable")
         return {"status": "ok"}
 
     return app

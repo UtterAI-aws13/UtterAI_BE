@@ -1,22 +1,25 @@
-"""ORM entities for the current backend milestone."""
+"""ORM entities based on ERD.md / DB Schema.md architecture."""
 
 import uuid
 from datetime import date, datetime
+from typing import Any
 
-from sqlalchemy import Date, DateTime, Enum, ForeignKey, String, Text, UniqueConstraint
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, Enum, Float, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.enums import (
-    AccessGrantLevel,
-    AccessGrantStatus,
-    AudioFileStatus,
     AnalysisJobStatus,
-    ChildStatus,
+    AudioFileStatus,
+    PatientStatus,
+    ReportSegmentType,
     ReportStatus,
     SessionStatus,
-    SoapNoteStatus,
     SpeakerRole,
+    TargetSpeaker,
+    TemplateStatus,
+    TemplateType,
+    TranscriptStatus,
     UserRole,
     UserStatus,
 )
@@ -24,22 +27,13 @@ from app.models.base import Base, TimestampMixin
 
 
 class User(TimestampMixin, Base):
-    """Core account model used by authentication and ownership checks."""
-
     __tablename__ = "users"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    role: Mapped[UserRole] = mapped_column(
-        Enum(UserRole, name="user_role"),
-        nullable=False,
-    )
+    role: Mapped[UserRole] = mapped_column(Enum(UserRole, name="user_role"), nullable=False)
     status: Mapped[UserStatus] = mapped_column(
         Enum(UserStatus, name="user_status"),
         nullable=False,
@@ -48,55 +42,69 @@ class User(TimestampMixin, Base):
     )
 
 
-class Child(TimestampMixin, Base):
-    """Child profile owned by a therapist and referenced by sessions."""
+class PatientRef(Base):
+    """Cloud-to-on-prem patient reference pointer."""
 
-    __tablename__ = "children"
+    __tablename__ = "patient_refs"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    created_by_slp_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
-    therapist_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False,
+    current_slp_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class Patient(Base):
+    """Cloud-side patient info. 1:1 with PatientRef."""
+
+    __tablename__ = "patients"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    patient_ref_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("patient_refs.id", ondelete="RESTRICT"), nullable=False, unique=True
     )
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     birth_date: Mapped[date | None] = mapped_column(Date, nullable=True)
-    gender: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    gender: Mapped[str | None] = mapped_column(String(1), nullable=True)
     memo: Mapped[str | None] = mapped_column(Text, nullable=True)
-    status: Mapped[ChildStatus] = mapped_column(
-        Enum(ChildStatus, name="child_status"),
+    status: Mapped[PatientStatus] = mapped_column(
+        Enum(PatientStatus, name="patient_status"),
         nullable=False,
-        default=ChildStatus.ACTIVE,
-        server_default=ChildStatus.ACTIVE.value,
+        default=PatientStatus.ACTIVE,
+        server_default=PatientStatus.ACTIVE.value,
     )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class RefreshToken(Base):
+    __tablename__ = "refresh_tokens"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    token_hash: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class Session(TimestampMixin, Base):
-    """Therapy or assessment session that becomes the analysis anchor unit."""
-
     __tablename__ = "sessions"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    patient_ref_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("patient_refs.id", ondelete="RESTRICT"), nullable=False
     )
-    child_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("children.id", ondelete="RESTRICT"),
-        nullable=False,
-    )
-    therapist_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False,
+    slp_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
     session_date: Mapped[date] = mapped_column(Date, nullable=False)
     session_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    session_goal: Mapped[str | None] = mapped_column(Text, nullable=True)
     memo: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[SessionStatus] = mapped_column(
         Enum(SessionStatus, name="session_status"),
@@ -104,346 +112,214 @@ class Session(TimestampMixin, Base):
         default=SessionStatus.CREATED,
         server_default=SessionStatus.CREATED.value,
     )
-
-
-class ChildAccessGrant(TimestampMixin, Base):
-    """Shared access record that grants derived session/result/report access."""
-
-    __tablename__ = "child_access_grants"
-    __table_args__ = (
-        UniqueConstraint("child_id", "grantee_user_id", name="uq_child_access_grants_child_grantee"),
-    )
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
-    )
-    child_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("children.id", ondelete="RESTRICT"),
-        nullable=False,
-    )
-    grantee_user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False,
-    )
-    granted_by_user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False,
-    )
-    access_level: Mapped[AccessGrantLevel] = mapped_column(
-        Enum(AccessGrantLevel, name="access_grant_level"),
-        nullable=False,
-    )
-    status: Mapped[AccessGrantStatus] = mapped_column(
-        Enum(AccessGrantStatus, name="access_grant_status"),
-        nullable=False,
-        default=AccessGrantStatus.ACTIVE,
-        server_default=AccessGrantStatus.ACTIVE.value,
-    )
-    expires_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True,
-    )
-    revoked_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True,
-    )
-
-
-class RefreshToken(Base):
-    """Persist refresh tokens so refresh/logout flows can revoke them safely.
-
-    Access tokens remain stateless JWTs, but refresh tokens are stored as hashes
-    so the backend can rotate them on refresh and revoke them during logout.
-    """
-
-    __tablename__ = "refresh_tokens"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
-    )
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-    )
-    token_hash: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-    )
-    revoked_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True,
-    )
-
-
-class AudioFile(TimestampMixin, Base):
-    """Metadata row for an uploaded or pending audio file."""
-
-    __tablename__ = "audio_files"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
-    )
-    session_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("sessions.id", ondelete="RESTRICT"),
-        nullable=False,
-    )
-    original_file_name: Mapped[str] = mapped_column(Text, nullable=False)
-    content_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    file_size: Mapped[int | None] = mapped_column(nullable=True)
-    s3_bucket: Mapped[str] = mapped_column(String(255), nullable=False)
-    s3_key: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
-    duration_seconds: Mapped[float | None] = mapped_column(nullable=True)
-    status: Mapped[AudioFileStatus] = mapped_column(
-        Enum(AudioFileStatus, name="audio_file_status"),
-        nullable=False,
-        default=AudioFileStatus.PENDING,
-        server_default=AudioFileStatus.PENDING.value,
-    )
-
-
-class AnalysisJob(TimestampMixin, Base):
-    """Track AI analysis requests and their lifecycle status."""
-
-    __tablename__ = "analysis_jobs"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
-    )
-    session_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("sessions.id", ondelete="RESTRICT"),
-        nullable=False,
-    )
-    audio_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("audio_files.id", ondelete="RESTRICT"),
-        nullable=False,
-    )
-    external_ai_job_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    status: Mapped[AnalysisJobStatus] = mapped_column(
-        Enum(AnalysisJobStatus, name="analysis_job_status"),
-        nullable=False,
-        default=AnalysisJobStatus.REQUESTED,
-        server_default=AnalysisJobStatus.REQUESTED.value,
-    )
-    progress: Mapped[int] = mapped_column(nullable=False, default=0, server_default="0")
-    current_stage: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    error_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
-    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
-class AnalysisResult(TimestampMixin, Base):
-    """Store analysis outputs and file pointers returned by the AI service."""
+class AudioFile(Base):
+    __tablename__ = "audio_files"
 
-    __tablename__ = "analysis_results"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="RESTRICT"), nullable=False
+    )
+    created_by_slp_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    object_key: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
+    original_filename: Mapped[str] = mapped_column(Text, nullable=False)
+    content_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    actual_size_bytes: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    presigned_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    uploaded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    status: Mapped[AudioFileStatus] = mapped_column(
+        Enum(AudioFileStatus, name="audio_file_status"),
+        nullable=False,
+        default=AudioFileStatus.PENDING_UPLOAD,
+        server_default=AudioFileStatus.PENDING_UPLOAD.value,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
+
+class AnalysisJob(Base):
+    __tablename__ = "analysis_jobs"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="RESTRICT"), nullable=False
+    )
+    audio_file_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("audio_files.id", ondelete="RESTRICT"), nullable=False
+    )
+    status: Mapped[AnalysisJobStatus] = mapped_column(
+        Enum(AnalysisJobStatus, name="analysis_job_status"),
+        nullable=False,
+        default=AnalysisJobStatus.PENDING,
+        server_default=AnalysisJobStatus.PENDING.value,
+    )
+    pipeline_stage: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    error_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    retry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class LanguageMetrics(Base):
+    __tablename__ = "language_metrics"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="RESTRICT"), nullable=False
     )
     job_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("analysis_jobs.id", ondelete="RESTRICT"),
+        UUID(as_uuid=True), ForeignKey("analysis_jobs.id", ondelete="RESTRICT"), nullable=False
+    )
+    target_speaker: Mapped[TargetSpeaker] = mapped_column(
+        Enum(TargetSpeaker, name="target_speaker"), nullable=False
+    )
+    total_utterances: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    ntw: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    ndw: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    ttr: Mapped[float | None] = mapped_column(Float, nullable=True)
+    mlu_morpheme: Mapped[float | None] = mapped_column(Float, nullable=True)
+    avg_response_latency_sec: Mapped[float | None] = mapped_column(Float, nullable=True)
+    max_response_latency_sec: Mapped[float | None] = mapped_column(Float, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class Transcript(TimestampMixin, Base):
+    __tablename__ = "transcripts"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="RESTRICT"), nullable=False
+    )
+    audio_file_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("audio_files.id", ondelete="RESTRICT"), nullable=False
+    )
+    job_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("analysis_jobs.id", ondelete="RESTRICT"), nullable=False
+    )
+    status: Mapped[TranscriptStatus] = mapped_column(
+        Enum(TranscriptStatus, name="transcript_status"),
         nullable=False,
+        default=TranscriptStatus.DRAFT,
+        server_default=TranscriptStatus.DRAFT.value,
+    )
+    raw_draft_s3_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+    final_s3_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+    finalized_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    finalized_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class TranscriptSegment(Base):
+    __tablename__ = "transcript_segments"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    transcript_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("transcripts.id", ondelete="CASCADE"), nullable=False
     )
     session_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("sessions.id", ondelete="RESTRICT"),
-        nullable=False,
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="RESTRICT"), nullable=False
     )
-    summary_json: Mapped[dict | None] = mapped_column(nullable=True)
-    metrics_json: Mapped[dict | None] = mapped_column(nullable=True)
-    interpretation_text: Mapped[str | None] = mapped_column(Text, nullable=True)
-    transcript_s3_key: Mapped[str | None] = mapped_column(Text, nullable=True)
-    metrics_s3_key: Mapped[str | None] = mapped_column(Text, nullable=True)
-    raw_result_s3_key: Mapped[str | None] = mapped_column(Text, nullable=True)
-    report_s3_key: Mapped[str | None] = mapped_column(Text, nullable=True)
-
-
-class Speaker(TimestampMixin, Base):
-    """Store AI-produced speaker labels and therapist-assigned role mapping."""
-
-    __tablename__ = "speakers"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
-    )
-    session_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("sessions.id", ondelete="RESTRICT"),
-        nullable=False,
-    )
-    speaker_label: Mapped[str] = mapped_column(String(50), nullable=False)
+    segment_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    speaker_label: Mapped[str | None] = mapped_column(String(50), nullable=True)
     speaker_role: Mapped[SpeakerRole] = mapped_column(
         Enum(SpeakerRole, name="speaker_role"),
         nullable=False,
         default=SpeakerRole.UNKNOWN,
         server_default=SpeakerRole.UNKNOWN.value,
     )
-
-
-class Utterance(TimestampMixin, Base):
-    """Store transcript segments created by STT and later edited by users."""
-
-    __tablename__ = "utterances"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
-    )
-    session_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("sessions.id", ondelete="RESTRICT"),
-        nullable=False,
-    )
-    speaker_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("speakers.id", ondelete="SET NULL"),
-        nullable=True,
-    )
-    speaker_label: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    start_time: Mapped[float | None] = mapped_column(nullable=True)
-    end_time: Mapped[float | None] = mapped_column(nullable=True)
+    start_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    end_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     original_text: Mapped[str | None] = mapped_column(Text, nullable=True)
-    edited_text: Mapped[str | None] = mapped_column(Text, nullable=True)
-    confidence: Mapped[float | None] = mapped_column(nullable=True)
-    is_confirmed: Mapped[bool] = mapped_column(nullable=False, default=False, server_default="false")
-
-
-class UtteranceEditHistory(Base):
-    """Append-only history table for transcript and speaker edits."""
-
-    __tablename__ = "utterance_edit_history"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
+    text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    is_edited: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    edited_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
-    utterance_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("utterances.id", ondelete="CASCADE"),
-        nullable=False,
-    )
-    session_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("sessions.id", ondelete="RESTRICT"),
-        nullable=False,
-    )
-    edited_by: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False,
-    )
-    previous_text: Mapped[str | None] = mapped_column(Text, nullable=True)
-    new_text: Mapped[str | None] = mapped_column(Text, nullable=True)
-    previous_speaker_role: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    new_speaker_role: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    edit_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
-class SoapNote(TimestampMixin, Base):
-    """Persist generated or edited SOAP notes linked to analysis artifacts."""
+class Template(TimestampMixin, Base):
+    __tablename__ = "templates"
 
-    __tablename__ = "soap_notes"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    owner_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
     )
-    session_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("sessions.id", ondelete="RESTRICT"),
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    template_type: Mapped[TemplateType] = mapped_column(
+        Enum(TemplateType, name="template_type"), nullable=False
+    )
+    sections_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    file_s3_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+    file_original_name: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    is_system: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    use_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    status: Mapped[TemplateStatus] = mapped_column(
+        Enum(TemplateStatus, name="template_status"),
         nullable=False,
-    )
-    result_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("analysis_results.id", ondelete="SET NULL"),
-        nullable=True,
-    )
-    job_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("analysis_jobs.id", ondelete="SET NULL"),
-        nullable=True,
-    )
-    generated_by: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False,
-    )
-    subjective: Mapped[str | None] = mapped_column(Text, nullable=True)
-    objective: Mapped[str | None] = mapped_column(Text, nullable=True)
-    assessment: Mapped[str | None] = mapped_column(Text, nullable=True)
-    plan: Mapped[str | None] = mapped_column(Text, nullable=True)
-    status: Mapped[SoapNoteStatus] = mapped_column(
-        Enum(SoapNoteStatus, name="soap_note_status"),
-        nullable=False,
-        default=SoapNoteStatus.DRAFT,
-        server_default=SoapNoteStatus.DRAFT.value,
+        default=TemplateStatus.ACTIVE,
+        server_default=TemplateStatus.ACTIVE.value,
     )
 
 
-class Report(TimestampMixin, Base):
-    """Persist generated clinician-facing reports derived from session artifacts."""
-
+class Report(Base):
     __tablename__ = "reports"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("sessions.id", ondelete="RESTRICT"),
-        nullable=False,
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="RESTRICT"), nullable=False
     )
-    result_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("analysis_results.id", ondelete="SET NULL"),
-        nullable=True,
+    job_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("analysis_jobs.id", ondelete="RESTRICT"), nullable=False
     )
-    soap_note_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("soap_notes.id", ondelete="SET NULL"),
-        nullable=True,
+    template_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("templates.id", ondelete="SET NULL"), nullable=True
     )
-    generated_by: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False,
-    )
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
-    template_type: Mapped[str] = mapped_column(String(100), nullable=False)
-    content: Mapped[str] = mapped_column(Text, nullable=False)
-    memo: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[ReportStatus] = mapped_column(
         Enum(ReportStatus, name="report_status"),
         nullable=False,
-        default=ReportStatus.READY,
-        server_default=ReportStatus.READY.value,
+        default=ReportStatus.DRAFT,
+        server_default="DRAFT",
     )
+    model_used: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    clinical_flags: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    evidence_chunk_ids: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    requires_human_review: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )
+    s3_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+    generated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class ReportSegment(Base):
+    __tablename__ = "report_segments"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    report_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("reports.id", ondelete="CASCADE"), nullable=False
+    )
+    segment_type: Mapped[ReportSegmentType] = mapped_column(
+        Enum(ReportSegmentType, name="report_segment_type"), nullable=False
+    )
+    segment_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    ai_content: Mapped[str | None] = mapped_column(Text, nullable=True)
+    content: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_edited: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    edited_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+

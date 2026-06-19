@@ -1,0 +1,23 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: utterai-postgres-local
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: utterai
+      POSTGRES_USER: utterai
+      POSTGRES_PASSWORD: utterai
+    ports:
+      - "5433:5432"
+    volumes:
+      - utterai_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U utterai -d utterai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  utterai_postgres_data:

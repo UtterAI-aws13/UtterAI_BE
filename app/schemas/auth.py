@@ -14,7 +14,7 @@ class SignupRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
     name: str = Field(min_length=1, max_length=100)
-    role: UserRole = UserRole.THERAPIST
+    role: UserRole = UserRole.SLP
 
 
 class LoginRequest(BaseModel):
@@ -64,3 +64,16 @@ class TokenPayload(BaseModel):
     """JWT claims required to resolve the current user."""
 
     sub: uuid.UUID
+
+
+class ProfileUpdateRequest(BaseModel):
+    """Payload for updating the authenticated user's display name."""
+
+    name: str = Field(min_length=1, max_length=100)
+
+
+class PasswordChangeRequest(BaseModel):
+    """Payload for changing the authenticated user's password."""
+
+    current_password: str = Field(min_length=8, max_length=128)
+    new_password: str = Field(min_length=8, max_length=128)

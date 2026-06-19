@@ -3,17 +3,29 @@
 from collections.abc import Generator
 
 from sqlalchemy import create_engine
+from sqlalchemy.engine import URL
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import get_settings
 
 settings = get_settings()
 
+_db_url = URL.create(
+    "postgresql+psycopg",
+    username=settings.db_user,
+    password=settings.db_password,
+    host=settings.db_host,
+    port=settings.db_port,
+    database=settings.db_name,
+)
+
 # The SQLAlchemy engine is process-wide because connection pools are intended
 # to be reused instead of recreated per request.
 engine = create_engine(
-    settings.database_url,
+    _db_url,
     pool_pre_ping=True,
+    pool_size=settings.db_pool_size,
+    max_overflow=settings.db_max_overflow,
 )
 
 # `autoflush=False` keeps writes explicit, which is safer while the service is

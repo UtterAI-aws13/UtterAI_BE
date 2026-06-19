@@ -126,6 +126,7 @@ Temporary Items
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+*.egg-info/
 
 # Virtual environment directories vary by developer machine.
 .venv/
@@ -149,5 +150,10 @@ Thumbs.db
 
 # Local design/planning docs not intended for the repository.
 claude_design_prompt.md
+
+# Python package build artifacts.
+*.egg-info/
+dist/
+build/
 
 **/.claude

@@ -1,4 +1,4 @@
-"""Session-centric transcript lookup endpoints."""
+"""Session-centric transcript lookup endpoint."""
 
 import uuid
 
@@ -20,7 +20,5 @@ def get_session_transcript(
     current_user: UserRead = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ) -> TranscriptRead:
-    """Return transcript data grouped by session id."""
-
     service = TranscriptService(db)
-    return service.get_transcript_by_session(session_id, current_user)
+    return service.get_by_session(session_id, current_user)

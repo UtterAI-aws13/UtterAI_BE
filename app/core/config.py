@@ -24,9 +24,18 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     api_prefix: str = "/api/v1"
 
-    database_url: str = (
-        "postgresql+psycopg://utterai:utterai@localhost:5432/utterai"
-    )
+    db_user: str = "utterai"
+    db_password: str = "utterai"
+    db_host: str = "localhost"
+    db_port: int = 5432
+    db_name: str = "utterai"
+    db_pool_size: int = 5
+    db_max_overflow: int = 10
+
+    redis_host: str = "localhost"
+    redis_port: int = 6379
+    redis_db: int = 0
+    redis_tls_enabled: bool = False
 
     jwt_secret_key: str = "change-me"
     jwt_algorithm: str = "HS256"
@@ -34,15 +43,24 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 14
 
     internal_callback_token: str = "change-me-internal-token"
-    internal_callback_hmac_secret: str = "change-me-hmac-secret"
 
     aws_region: str = "ap-northeast-2"
     raw_audio_bucket: str = "utterai-raw-audio"
+    template_bucket: str = "utterai-dev-template"
     presigned_url_expire_seconds: int = 900
 
-    ai_service_base_url: str = ""
-    ai_service_analysis_path: str = "/internal/ai/analysis-jobs"
-    public_api_base_url: str = "http://localhost:8000"
+    sqs_audio_preprocess_queue_url: str = ""
+    sqs_report_analysis_queue_url: str = ""
+
+    otel_service_name: str = "backend"
+    otel_exporter_otlp_endpoint: str = "http://localhost:4318"
+    otel_exporter_otlp_protocol: str = "http/protobuf"
+    otel_metrics_exporter: str = "otlp"
+    otel_traces_exporter: str = "otlp"
+    otel_logs_exporter: str = "none"
+    otel_resource_attributes: str = "deployment.environment=local,team=utterai"
+
+    cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
 
 
 @lru_cache
