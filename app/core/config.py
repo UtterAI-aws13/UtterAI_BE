@@ -44,9 +44,6 @@ class Settings(BaseSettings):
 
     internal_callback_token: str = "change-me-internal-token"
 
-    ai_service_base_url: str = ""
-    ai_service_analysis_path: str = "/internal/ai/analysis-jobs"
-
     aws_region: str = "ap-northeast-2"
     raw_audio_bucket: str = "utterai-raw-audio"
     template_bucket: str = "utterai-dev-template"
