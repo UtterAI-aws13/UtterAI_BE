@@ -16,4 +16,7 @@ RUN uv sync --frozen --no-dev
 
 EXPOSE 8080
 
+RUN adduser --disabled-password --uid 1000 appuser
+USER 1000
+
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
