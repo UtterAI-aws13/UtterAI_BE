@@ -230,7 +230,7 @@ class TranscriptService:
         return results
 
     def finalize(
-        self, transcript_id: uuid.UUID, current_user: UserRead
+        self, transcript_id: uuid.UUID, current_user: UserRead, template_id: uuid.UUID | None = None
     ) -> TranscriptFinalizeResponse:
         transcript = self.transcript_repository.get_by_id(transcript_id)
         if transcript is None:
@@ -260,6 +260,7 @@ class TranscriptService:
                     job_id=str(job.id),
                     session_id=str(transcript.session_id),
                     transcript_id=str(updated.id),
+                    template_id=str(template_id) if template_id is not None else None,
                 )
                 logger.info(f"finalize: report job SQS 발행 완료 job_id={job.id}")
                 session = self.session_repository.get_by_id(transcript.session_id)

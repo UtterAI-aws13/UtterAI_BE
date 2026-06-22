@@ -37,7 +37,13 @@ class SQSClient:
             MessageBody=json.dumps(payload),
         )
 
-    def send_report_job(self, job_id: str, session_id: str, transcript_id: str) -> None:
+    def send_report_job(
+        self,
+        job_id: str,
+        session_id: str,
+        transcript_id: str,
+        template_id: str | None = None,
+    ) -> None:
         """Publish a report generation request to the report analysis queue.
 
         Returns without sending when the queue URL is not configured.
@@ -45,11 +51,13 @@ class SQSClient:
         if not settings.sqs_report_analysis_queue_url:
             return
 
-        payload = {
+        payload: dict = {
             "job_id": job_id,
             "session_id": session_id,
             "transcript_id": transcript_id,
         }
+        if template_id is not None:
+            payload["template_id"] = template_id
         self._get_client().send_message(
             QueueUrl=settings.sqs_report_analysis_queue_url,
             MessageBody=json.dumps(payload),

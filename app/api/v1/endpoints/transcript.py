@@ -11,6 +11,7 @@ from app.schemas.auth import UserRead
 from app.schemas.transcript import (
     InternalTranscriptCallbackRequest,
     TranscriptBulkUpdateRequest,
+    TranscriptFinalizeRequest,
     TranscriptFinalizeResponse,
     TranscriptRead,
     TranscriptSegmentRead,
@@ -68,11 +69,12 @@ def bulk_update_transcript_segments(
 @router.post("/{transcript_id}/finalize", response_model=TranscriptFinalizeResponse)
 def finalize_transcript(
     transcript_id: uuid.UUID,
+    request: TranscriptFinalizeRequest = TranscriptFinalizeRequest(),
     current_user: UserRead = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ) -> TranscriptFinalizeResponse:
     service = TranscriptService(db)
-    return service.finalize(transcript_id, current_user)
+    return service.finalize(transcript_id, current_user, template_id=request.template_id)
 
 
 @internal_result_router.post("/callback", response_model=TranscriptRead)
