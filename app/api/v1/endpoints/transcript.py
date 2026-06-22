@@ -55,6 +55,17 @@ def update_transcript_segment(
     return service.update_segment(transcript_id, segment_id, request, current_user)
 
 
+@router.delete("/{transcript_id}/segments/{segment_id}", status_code=204)
+def delete_transcript_segment(
+    transcript_id: uuid.UUID,
+    segment_id: uuid.UUID,
+    current_user: UserRead = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> None:
+    service = TranscriptService(db)
+    service.delete_segment(transcript_id, segment_id, current_user)
+
+
 @router.patch("/{transcript_id}/segments", response_model=list[TranscriptSegmentRead])
 def bulk_update_transcript_segments(
     transcript_id: uuid.UUID,
