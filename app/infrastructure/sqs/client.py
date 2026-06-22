@@ -43,6 +43,7 @@ class SQSClient:
         session_id: str,
         transcript_id: str,
         template_id: str | None = None,
+        final_s3_key: str | None = None,
     ) -> None:
         """Publish a report generation request to the report analysis queue.
 
@@ -58,6 +59,8 @@ class SQSClient:
         }
         if template_id is not None:
             payload["template_id"] = template_id
+        if final_s3_key is not None:
+            payload["final_s3_key"] = final_s3_key
         self._get_client().send_message(
             QueueUrl=settings.sqs_report_analysis_queue_url,
             MessageBody=json.dumps(payload),

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.models.entities import Transcript, TranscriptSegment
@@ -70,3 +70,10 @@ class TranscriptRepository:
         for seg in segments:
             self.db.refresh(seg)
         return segments
+
+    def delete_segments(self, transcript_id: uuid.UUID) -> int:
+        result = self.db.execute(
+            delete(TranscriptSegment).where(TranscriptSegment.transcript_id == transcript_id)
+        )
+        self.db.commit()
+        return result.rowcount

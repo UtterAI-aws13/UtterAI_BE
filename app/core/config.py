@@ -45,8 +45,9 @@ class Settings(BaseSettings):
     internal_callback_token: str = "change-me-internal-token"
 
     aws_region: str = "ap-northeast-2"
-    raw_audio_bucket: str = "utterai-raw-audio"
-    template_bucket: str = "utterai-dev-template"
+    s3_bucket_audio: str = "utterai-dev-raw-audio"
+    s3_bucket_template: str = "utterai-dev-template"
+    s3_bucket_transcript: str = "utterai-dev-transcripts"
     presigned_url_expire_seconds: int = 900
 
     sqs_audio_preprocess_queue_url: str = ""

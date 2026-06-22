@@ -77,6 +77,16 @@ class S3Client:
                 ExpiresIn=expires_in,
             )
 
+    def get_object_bytes(self, bucket: str, key: str) -> bytes:
+        """Download an S3 object and return its raw bytes."""
+
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("s3.get_object_bytes") as span:
+            span.set_attribute("aws.s3.bucket", bucket)
+            span.set_attribute("aws.s3.key", key)
+            response = self.client.get_object(Bucket=bucket, Key=key)
+            return response["Body"].read()
+
     def object_exists(self, bucket: str, key: str) -> bool:
         """Check whether an uploaded object is present in S3.
 
