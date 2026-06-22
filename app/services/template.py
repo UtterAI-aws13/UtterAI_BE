@@ -9,7 +9,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session as DbSession
 
 from app.core.config import get_settings
-from app.core.enums import TemplateStatus, TemplateType, UserRole
+from app.core.enums import TemplateStatus, UserRole
 from app.infrastructure.s3.client import S3Client
 from app.models.entities import Template
 from app.repositories.template import TemplateRepository
@@ -79,7 +79,7 @@ class TemplateService:
         created = self.repository.create(template)
 
         upload_url = self.s3_client.generate_upload_url(
-            bucket=settings.template_bucket,
+            bucket=settings.s3_bucket_template,
             key=object_key,
             content_type=request.content_type,
         )
@@ -107,7 +107,7 @@ class TemplateService:
         if current_user.role != UserRole.ADMIN and template.owner_id != current_user.id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have access to this template.")
 
-        if not template.file_s3_key or not self.s3_client.object_exists(settings.template_bucket, template.file_s3_key):
+        if not template.file_s3_key or not self.s3_client.object_exists(settings.s3_bucket_template, template.file_s3_key):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Uploaded object not found in S3. Upload the file before confirming.",
@@ -124,7 +124,7 @@ class TemplateService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="No file is attached to this template.",
             )
-        url = self.s3_client.generate_download_url(settings.template_bucket, template.file_s3_key)
+        url = self.s3_client.generate_download_url(settings.s3_bucket_template, template.file_s3_key)
         return TemplateFileUrlResponse(url=url)
 
     def list(self, current_user: UserRead) -> list[TemplateRead]:

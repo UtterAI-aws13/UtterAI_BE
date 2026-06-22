@@ -2,24 +2,22 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-import uuid
-
+import json
 import logging
+import uuid
+from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
-from opentelemetry import trace
-
-logger = logging.getLogger(__name__)
 from sqlalchemy.orm import Session as DbSession
 
+from app.core.config import get_settings
 from app.core.enums import AnalysisJobStatus, SessionStatus, TranscriptStatus, UserRole
-from app.models.entities import Transcript, TranscriptSegment
+from app.infrastructure.s3.client import S3Client
 from app.infrastructure.sqs.client import SQSClient
+from app.models.entities import Transcript, TranscriptSegment
 from app.repositories.analysis_job import AnalysisJobRepository
 from app.repositories.session import SessionRepository
 from app.repositories.transcript import TranscriptRepository
-from app.observability.metrics import record_analysis_job_callback_received
 from app.schemas.auth import UserRead
 from app.schemas.transcript import (
     InternalTranscriptCallbackRequest,
@@ -30,12 +28,16 @@ from app.schemas.transcript import (
     TranscriptSegmentUpdateRequest,
 )
 
+logger = logging.getLogger(__name__)
+settings = get_settings()
+
 
 class TranscriptService:
     def __init__(self, db: DbSession) -> None:
         self.transcript_repository = TranscriptRepository(db)
         self.analysis_job_repository = AnalysisJobRepository(db)
         self.session_repository = SessionRepository(db)
+        self.s3_client = S3Client()
 # db 마이그레이션 하면서 빠진 
 #     def handle_result_callback(self, request: AnalysisResultCallbackRequest) -> TranscriptRead:
 #         """Persist completed analysis results and transcript rows from AI callback.
@@ -160,6 +162,11 @@ class TranscriptService:
                 detail="Transcript not found.",
             )
         self._get_accessible_session(transcript.session_id, current_user)
+
+        if transcript.status == TranscriptStatus.FINALIZED and transcript.final_s3_key:
+            raw = self.s3_client.get_object_bytes(settings.s3_bucket_transcript, transcript.final_s3_key)
+            return [TranscriptSegmentRead.model_validate(seg) for seg in json.loads(raw)]
+
         segments = self.transcript_repository.list_segments(transcript_id)
         return [TranscriptSegmentRead.model_validate(s) for s in segments]
 
@@ -246,10 +253,24 @@ class TranscriptService:
                 detail="이미 확정된 전사입니다.",
             )
 
+        segments = self.transcript_repository.list_segments(transcript_id)
+        segment_dicts = [TranscriptSegmentRead.model_validate(s).model_dump(mode="json") for s in segments]
+        final_s3_key = f"finals/{transcript.session_id}/{transcript_id}.json"
+        self.s3_client.upload_bytes(
+            bucket=settings.s3_bucket_transcript,
+            key=final_s3_key,
+            data=json.dumps(segment_dicts).encode(),
+            content_type="application/json",
+        )
+
         transcript.status = TranscriptStatus.FINALIZED
         transcript.finalized_by = current_user.id
         transcript.finalized_at = datetime.now(UTC)
+        transcript.final_s3_key = final_s3_key
         updated = self.transcript_repository.update(transcript)
+
+        deleted_count = self.transcript_repository.delete_segments(transcript_id)
+        logger.info(f"finalize: deleted {deleted_count} transcript_segments from RDS transcript_id={transcript_id}")
 
         job = self.analysis_job_repository.get_by_id(transcript.job_id)
         if job is None:
@@ -261,6 +282,7 @@ class TranscriptService:
                     session_id=str(transcript.session_id),
                     transcript_id=str(updated.id),
                     template_id=str(template_id) if template_id is not None else None,
+                    final_s3_key=final_s3_key,
                 )
                 logger.info(f"finalize: report job SQS 발행 완료 job_id={job.id}")
                 session = self.session_repository.get_by_id(transcript.session_id)
