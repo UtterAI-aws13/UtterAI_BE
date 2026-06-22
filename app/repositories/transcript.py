@@ -71,6 +71,14 @@ class TranscriptRepository:
             self.db.refresh(seg)
         return segments
 
+    def delete_segment(self, segment_id: uuid.UUID) -> bool:
+        segment = self.get_segment_by_id(segment_id)
+        if segment is None:
+            return False
+        self.db.delete(segment)
+        self.db.commit()
+        return True
+
     def delete_segments(self, transcript_id: uuid.UUID) -> int:
         result = self.db.execute(
             delete(TranscriptSegment).where(TranscriptSegment.transcript_id == transcript_id)

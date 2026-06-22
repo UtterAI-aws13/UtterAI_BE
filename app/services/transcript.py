@@ -236,6 +236,34 @@ class TranscriptService:
             results.append(updated)
         return results
 
+    def delete_segment(
+        self,
+        transcript_id: uuid.UUID,
+        segment_id: uuid.UUID,
+        current_user: UserRead,
+    ) -> None:
+        transcript = self.transcript_repository.get_by_id(transcript_id)
+        if transcript is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Transcript not found.",
+            )
+        if transcript.status == TranscriptStatus.FINALIZED:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Finalized transcripts cannot be edited.",
+            )
+        self._get_accessible_session(transcript.session_id, current_user)
+
+        segment = self.transcript_repository.get_segment_by_id(segment_id)
+        if segment is None or segment.transcript_id != transcript_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Transcript segment not found.",
+            )
+
+        self.transcript_repository.delete_segment(segment_id)
+
     def finalize(
         self, transcript_id: uuid.UUID, current_user: UserRead, template_id: uuid.UUID | None = None
     ) -> TranscriptFinalizeResponse:
