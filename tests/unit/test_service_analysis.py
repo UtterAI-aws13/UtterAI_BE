@@ -60,6 +60,7 @@ def _make_job(session_id: uuid.UUID, status: AnalysisJobStatus = AnalysisJobStat
     j.id = uuid.uuid4()
     j.session_id = session_id
     j.audio_file_id = uuid.uuid4()
+    j.template_id = None
     j.status = status
     j.pipeline_stage = None
     j.error_code = None
