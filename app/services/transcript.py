@@ -284,12 +284,19 @@ class TranscriptService:
         segments = self.transcript_repository.list_segments(transcript_id)
         segment_dicts = [TranscriptSegmentRead.model_validate(s).model_dump(mode="json") for s in segments]
         final_s3_key = f"finals/{transcript.session_id}/{transcript_id}.json"
-        self.s3_client.upload_bytes(
-            bucket=settings.s3_bucket_transcript,
-            key=final_s3_key,
-            data=json.dumps(segment_dicts).encode(),
-            content_type="application/json",
-        )
+        try:
+            self.s3_client.upload_bytes(
+                bucket=settings.s3_bucket_transcript,
+                key=final_s3_key,
+                data=json.dumps(segment_dicts).encode(),
+                content_type="application/json",
+            )
+        except Exception as exc:
+            logger.error(f"finalize: S3 업로드 실패 transcript_id={transcript_id} error={exc}")
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="전사 저장에 실패했습니다. 잠시 후 다시 시도해주세요.",
+            ) from exc
 
         transcript.status = TranscriptStatus.FINALIZED
         transcript.finalized_by = current_user.id
@@ -305,11 +312,12 @@ class TranscriptService:
             logger.warning(f"finalize: analysis_job not found for transcript {transcript_id}, SQS 발행 생략")
         else:
             try:
+                effective_template_id = template_id if template_id is not None else job.template_id
                 SQSClient().send_report_job(
                     job_id=str(job.id),
                     session_id=str(transcript.session_id),
                     transcript_id=str(updated.id),
-                    template_id=str(template_id) if template_id is not None else None,
+                    template_id=str(effective_template_id) if effective_template_id is not None else None,
                     final_s3_key=final_s3_key,
                 )
                 logger.info(f"finalize: report job SQS 발행 완료 job_id={job.id}")
