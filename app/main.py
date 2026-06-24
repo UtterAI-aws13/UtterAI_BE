@@ -6,6 +6,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.logging import configure_logging
 from app.observability.otel import initialize_observability, instrument_fastapi_app
 
 
@@ -13,6 +14,7 @@ def create_application() -> FastAPI:
     """Create the FastAPI application with shared configuration and routers."""
 
     settings = get_settings()
+    configure_logging(level=settings.log_level)
     initialize_observability()
 
     from app.api.router import api_router
