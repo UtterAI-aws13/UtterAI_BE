@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import time
 import uuid
 from datetime import UTC, datetime
 
@@ -14,7 +15,11 @@ from app.core.config import get_settings
 from app.core.enums import AudioFileStatus, SessionStatus, UserRole
 from app.infrastructure.s3.client import S3Client
 from app.models.entities import AudioFile
-from app.observability.metrics import record_audio_upload_completed
+from app.observability.metrics import (
+    record_audio_presign_duration,
+    record_audio_presign_result,
+    record_audio_upload_completed,
+)
 from app.repositories.audio import AudioFileRepository
 from app.repositories.session import SessionRepository
 from app.schemas.audio import (
@@ -69,11 +74,19 @@ class AudioService:
                 session.status = SessionStatus.AUDIO_UPLOADING
                 self.session_repository.update(session)
 
-            upload_url = self.s3_client.generate_upload_url(
-                bucket=settings.s3_bucket_audio,
-                key=created_audio.object_key,
-                content_type=request.content_type,
-            )
+            _start = time.monotonic()
+            try:
+                upload_url = self.s3_client.generate_upload_url(
+                    bucket=settings.s3_bucket_audio,
+                    key=created_audio.object_key,
+                    content_type=request.content_type,
+                )
+                record_audio_presign_result("success")
+            except Exception:
+                record_audio_presign_result("error")
+                raise
+            finally:
+                record_audio_presign_duration(time.monotonic() - _start)
             span.set_attribute("audio.file.id", str(created_audio.id))
             return PresignedUploadResponse(
                 audio_file_id=created_audio.id,

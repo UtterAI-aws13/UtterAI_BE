@@ -6,10 +6,19 @@ import json
 from typing import Any
 
 import boto3
+from opentelemetry.propagate import inject
 
 from app.core.config import get_settings
+from app.observability.metrics import record_sqs_dispatch
 
 settings = get_settings()
+
+
+def _build_trace_message_attributes() -> dict[str, dict[str, str]]:
+    """Inject the active OTel span context into SQS MessageAttributes (W3C traceparent)."""
+    carrier: dict[str, str] = {}
+    inject(carrier)
+    return {k: {"DataType": "String", "StringValue": v} for k, v in carrier.items()}
 
 
 class SQSClient:
@@ -32,10 +41,22 @@ class SQSClient:
         if not settings.sqs_audio_preprocess_queue_url:
             return
 
-        self._get_client().send_message(
-            QueueUrl=settings.sqs_audio_preprocess_queue_url,
-            MessageBody=json.dumps(payload),
-        )
+        carrier: dict[str, str] = {}
+        inject(carrier)
+        if carrier.get("traceparent"):
+            payload = {**payload, "traceparent": carrier["traceparent"]}
+
+        queue = "audio-preprocess"
+        try:
+            self._get_client().send_message(
+                QueueUrl=settings.sqs_audio_preprocess_queue_url,
+                MessageBody=json.dumps(payload),
+                MessageAttributes=_build_trace_message_attributes(),
+            )
+            record_sqs_dispatch(queue, "success")
+        except Exception:
+            record_sqs_dispatch(queue, "error")
+            raise
 
     def send_report_job(
         self,
@@ -61,7 +82,20 @@ class SQSClient:
             payload["template_id"] = template_id
         if final_s3_key is not None:
             payload["final_s3_key"] = final_s3_key
-        self._get_client().send_message(
-            QueueUrl=settings.sqs_report_analysis_queue_url,
-            MessageBody=json.dumps(payload),
-        )
+
+        carrier: dict[str, str] = {}
+        inject(carrier)
+        if carrier.get("traceparent"):
+            payload["traceparent"] = carrier["traceparent"]
+
+        queue = "report-analysis"
+        try:
+            self._get_client().send_message(
+                QueueUrl=settings.sqs_report_analysis_queue_url,
+                MessageBody=json.dumps(payload),
+                MessageAttributes=_build_trace_message_attributes(),
+            )
+            record_sqs_dispatch(queue, "success")
+        except Exception:
+            record_sqs_dispatch(queue, "error")
+            raise
