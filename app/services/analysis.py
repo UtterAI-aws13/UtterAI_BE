@@ -102,6 +102,7 @@ class AnalysisJobService:
             job = AnalysisJob(
                 session_id=session.id,
                 audio_file_id=audio_file.id,
+                template_id=request.template_id,
                 status=AnalysisJobStatus.PENDING,
                 created_at=now,
             )

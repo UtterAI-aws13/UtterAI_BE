@@ -150,6 +150,9 @@ class AnalysisJob(Base):
     audio_file_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("audio_files.id", ondelete="RESTRICT"), nullable=False
     )
+    template_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("templates.id", ondelete="SET NULL"), nullable=True
+    )
     status: Mapped[AnalysisJobStatus] = mapped_column(
         Enum(AnalysisJobStatus, name="analysis_job_status"),
         nullable=False,
