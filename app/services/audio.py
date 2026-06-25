@@ -77,7 +77,7 @@ class AudioService:
             t0 = time.monotonic()
             try:
                 upload_url = self.s3_client.generate_upload_url(
-                    bucket=settings.raw_audio_bucket,
+                    bucket=settings.s3_bucket_audio,
                     key=created_audio.object_key,
                     content_type=request.content_type,
                 )
@@ -116,7 +116,7 @@ class AudioService:
                     detail="Deleted audio files cannot be completed.",
                 )
 
-            if not self.s3_client.object_exists(settings.raw_audio_bucket, audio_file.object_key):
+            if not self.s3_client.object_exists(settings.s3_bucket_audio, audio_file.object_key):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Uploaded object not found in S3.",
