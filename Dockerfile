@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.7
+
 FROM python:3.11-slim
 
 WORKDIR /app
@@ -8,11 +10,14 @@ ENV PATH="/app/.venv/bin:$PATH"
 
 COPY --from=ghcr.io/astral-sh/uv:0.5.30 /uv /usr/local/bin/uv
 
-COPY pyproject.toml uv.lock README.md alembic.ini ./
+COPY pyproject.toml uv.lock README.md ./
+
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-install-project
+
+COPY alembic.ini ./
 COPY app ./app
 COPY alembic ./alembic
-
-RUN uv sync --frozen --no-dev
 
 EXPOSE 8080
 
