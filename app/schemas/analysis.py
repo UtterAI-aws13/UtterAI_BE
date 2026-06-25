@@ -20,6 +20,7 @@ class AnalysisJobRead(BaseModel):
     id: uuid.UUID
     session_id: uuid.UUID
     audio_file_id: uuid.UUID
+    template_id: uuid.UUID | None
     status: AnalysisJobStatus
     pipeline_stage: str | None
     error_code: str | None

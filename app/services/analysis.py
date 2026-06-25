@@ -102,6 +102,7 @@ class AnalysisJobService:
             job = AnalysisJob(
                 session_id=session.id,
                 audio_file_id=audio_file.id,
+                template_id=request.template_id,
                 status=AnalysisJobStatus.PENDING,
                 created_at=now,
             )
@@ -117,7 +118,7 @@ class AnalysisJobService:
                 "audio_file_id": str(created_job.audio_file_id),
                 "user_id": str(current_user.id),
                 "audio": {
-                    "bucket": settings.raw_audio_bucket,
+                    "bucket": settings.s3_bucket_audio,
                     "key": audio_file.object_key,
                     "content_type": audio_file.content_type or "audio/wav",
                 },

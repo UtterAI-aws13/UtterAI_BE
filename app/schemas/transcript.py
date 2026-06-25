@@ -59,6 +59,10 @@ class TranscriptBulkUpdateRequest(BaseModel):
     segments: list[TranscriptBulkUpdateItem]
 
 
+class TranscriptFinalizeRequest(BaseModel):
+    template_id: uuid.UUID | None = None
+
+
 class TranscriptFinalizeResponse(BaseModel):
     transcript_id: uuid.UUID
     status: TranscriptStatus

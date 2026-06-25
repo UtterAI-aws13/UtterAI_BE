@@ -11,6 +11,7 @@ from app.schemas.auth import UserRead
 from app.schemas.transcript import (
     InternalTranscriptCallbackRequest,
     TranscriptBulkUpdateRequest,
+    TranscriptFinalizeRequest,
     TranscriptFinalizeResponse,
     TranscriptRead,
     TranscriptSegmentRead,
@@ -54,6 +55,17 @@ def update_transcript_segment(
     return service.update_segment(transcript_id, segment_id, request, current_user)
 
 
+@router.delete("/{transcript_id}/segments/{segment_id}", status_code=204)
+def delete_transcript_segment(
+    transcript_id: uuid.UUID,
+    segment_id: uuid.UUID,
+    current_user: UserRead = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> None:
+    service = TranscriptService(db)
+    service.delete_segment(transcript_id, segment_id, current_user)
+
+
 @router.patch("/{transcript_id}/segments", response_model=list[TranscriptSegmentRead])
 def bulk_update_transcript_segments(
     transcript_id: uuid.UUID,
@@ -68,11 +80,12 @@ def bulk_update_transcript_segments(
 @router.post("/{transcript_id}/finalize", response_model=TranscriptFinalizeResponse)
 def finalize_transcript(
     transcript_id: uuid.UUID,
+    request: TranscriptFinalizeRequest = TranscriptFinalizeRequest(),
     current_user: UserRead = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ) -> TranscriptFinalizeResponse:
     service = TranscriptService(db)
-    return service.finalize(transcript_id, current_user)
+    return service.finalize(transcript_id, current_user, template_id=request.template_id)
 
 
 @internal_result_router.post("/callback", response_model=TranscriptRead)
