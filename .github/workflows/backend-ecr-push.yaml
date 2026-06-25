@@ -9,6 +9,7 @@ on:
       - "app/**"
       - "alembic/**"
       - "pyproject.toml"
+      - "uv.lock"
       - "alembic.ini"
       - "Dockerfile"
       - ".dockerignore"
@@ -129,20 +130,17 @@ jobs:
         id: ecr-login
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build and push Docker image
-        env:
-          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
-          IMAGE_TAG: ${{ steps.image-meta.outputs.image_tag }}
-        run: |
-          IMAGE_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
-
-          echo "Build image: $IMAGE_URI"
-          docker build -t "$IMAGE_URI" .
-
-          echo "Push image: $IMAGE_URI"
-          docker push "$IMAGE_URI"
-
-          echo "IMAGE_URI=$IMAGE_URI"
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.image-meta.outputs.image_tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Create Infra GitHub App token
         id: infra-app-token
