@@ -50,7 +50,14 @@ class SQSClient:
             record_sqs_dispatch(queue, "error")
             raise
 
-    def send_report_job(self, job_id: str, session_id: str, transcript_id: str) -> None:
+    def send_report_job(
+        self,
+        job_id: str,
+        session_id: str,
+        transcript_id: str,
+        template_id: str | None = None,
+        final_s3_key: str | None = None,
+    ) -> None:
         if not settings.sqs_report_analysis_queue_url:
             return
 
@@ -59,6 +66,10 @@ class SQSClient:
             "session_id": session_id,
             "transcript_id": transcript_id,
         }
+        if template_id is not None:
+            payload["template_id"] = template_id
+        if final_s3_key is not None:
+            payload["final_s3_key"] = final_s3_key
         carrier: dict[str, str] = {}
         inject(carrier)
         if carrier.get("traceparent"):
