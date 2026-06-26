@@ -36,6 +36,7 @@ _CANCELLABLE_STATUSES = {
     AnalysisJobStatus.PENDING,
     AnalysisJobStatus.DOWNLOADING,
     AnalysisJobStatus.RETRYING,
+    AnalysisJobStatus.FAILED,
 }
 
 _TERMINAL_STATUSES = {
