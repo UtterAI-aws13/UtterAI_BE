@@ -11,7 +11,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session as DbSession
 
 from app.core.config import get_settings
-from app.core.enums import AnalysisJobStatus, SessionStatus, TranscriptStatus, UserRole
+from app.core.enums import AnalysisJobStatus, SessionStatus, SpeakerRole, TranscriptStatus, UserRole
 from app.infrastructure.s3.client import S3Client
 from app.infrastructure.sqs.client import SQSClient
 from app.models.entities import Transcript, TranscriptSegment
@@ -24,6 +24,7 @@ from app.schemas.transcript import (
     TranscriptBulkUpdateRequest,
     TranscriptFinalizeResponse,
     TranscriptRead,
+    TranscriptSegmentCreateRequest,
     TranscriptSegmentRead,
     TranscriptSegmentUpdateRequest,
 )
@@ -215,6 +216,60 @@ class TranscriptService:
             self.transcript_repository.update(transcript)
 
         return TranscriptSegmentRead.model_validate(updated)
+
+    def create_segment(
+        self,
+        transcript_id: uuid.UUID,
+        request: TranscriptSegmentCreateRequest,
+        current_user: UserRead,
+    ) -> TranscriptSegmentRead:
+        transcript = self.transcript_repository.get_by_id(transcript_id)
+        if transcript is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Transcript not found.",
+            )
+        if transcript.status == TranscriptStatus.FINALIZED:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Finalized transcripts cannot be edited.",
+            )
+        self._get_accessible_session(transcript.session_id, current_user)
+
+        after_segment = self.transcript_repository.get_segment_by_id(request.after_segment_id)
+        if after_segment is None or after_segment.transcript_id != transcript_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Reference segment not found.",
+            )
+
+        new_index = after_segment.segment_index + 1
+        self.transcript_repository.shift_segment_indices_after(transcript_id, after_segment.segment_index)
+
+        now = datetime.now(UTC)
+        new_segment = TranscriptSegment(
+            transcript_id=transcript_id,
+            session_id=transcript.session_id,
+            segment_index=new_index,
+            speaker_label=None,
+            speaker_role=SpeakerRole.UNKNOWN,
+            start_ms=None,
+            end_ms=None,
+            original_text=request.text,
+            text=request.text,
+            confidence=None,
+            is_edited=True,
+            edited_by=uuid.UUID(str(current_user.id)),
+            edited_at=now,
+            created_at=now,
+        )
+        created = self.transcript_repository.create_segment(new_segment)
+
+        if transcript.status == TranscriptStatus.DRAFT:
+            transcript.status = TranscriptStatus.EDITING
+            self.transcript_repository.update(transcript)
+
+        return TranscriptSegmentRead.model_validate(created)
 
     def bulk_update_segments(
         self,

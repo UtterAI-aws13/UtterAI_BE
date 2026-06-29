@@ -71,6 +71,17 @@ class TranscriptRepository:
             self.db.refresh(seg)
         return segments
 
+    def shift_segment_indices_after(self, transcript_id: uuid.UUID, after_index: int) -> None:
+        from sqlalchemy import update as sa_update
+
+        self.db.execute(
+            sa_update(TranscriptSegment)
+            .where(TranscriptSegment.transcript_id == transcript_id)
+            .where(TranscriptSegment.segment_index > after_index)
+            .values(segment_index=TranscriptSegment.segment_index + 1)
+        )
+        self.db.commit()
+
     def delete_segment(self, segment_id: uuid.UUID) -> bool:
         segment = self.get_segment_by_id(segment_id)
         if segment is None:

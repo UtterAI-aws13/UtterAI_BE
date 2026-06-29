@@ -14,6 +14,7 @@ from app.schemas.transcript import (
     TranscriptFinalizeRequest,
     TranscriptFinalizeResponse,
     TranscriptRead,
+    TranscriptSegmentCreateRequest,
     TranscriptSegmentRead,
     TranscriptSegmentUpdateRequest,
 )
@@ -41,6 +42,17 @@ def list_transcript_segments(
 ) -> list[TranscriptSegmentRead]:
     service = TranscriptService(db)
     return service.list_segments(transcript_id, current_user)
+
+
+@router.post("/{transcript_id}/segments", response_model=TranscriptSegmentRead, status_code=201)
+def create_transcript_segment(
+    transcript_id: uuid.UUID,
+    request: TranscriptSegmentCreateRequest,
+    current_user: UserRead = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> TranscriptSegmentRead:
+    service = TranscriptService(db)
+    return service.create_segment(transcript_id, request, current_user)
 
 
 @router.patch("/{transcript_id}/segments/{segment_id}", response_model=TranscriptSegmentRead)
