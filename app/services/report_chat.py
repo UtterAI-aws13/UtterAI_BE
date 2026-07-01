@@ -244,20 +244,36 @@ class ReportChatService:
                 return seg
         return None
 
+    # ai-service는 cpu-worker와 spot NodePool을 공유한다 — 요청 처리 도중 노드가
+    # spot 회수될 수 있고, 이때 연결이 끊긴 요청은 자동 재시도되지 않는다(SQS와
+    # 달리 재전달 보장이 없는 동기 HTTP 호출이라서). 새 연결은 Service를 거쳐
+    # 다른 파드로 붙으므로, 연결 자체가 끊긴 경우(RequestError)에 한해 한 번만
+    # 재시도한다. AI 서비스가 실제로 처리하다 응답한 에러(HTTPStatusError)는
+    # 재시도해도 같은 결과이므로 바로 실패 처리한다.
+    _AI_SERVICE_MAX_ATTEMPTS = 2
+
     def _call_ai_service(self, payload: dict) -> dict:
         url = f"{settings.ai_service_base_url}/ai/report-chat"
-        try:
-            with httpx.Client(timeout=60.0) as client:
-                resp = client.post(url, json=payload)
-            resp.raise_for_status()
-            return resp.json()
-        except httpx.HTTPStatusError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"AI service error: {exc.response.status_code}",
-            ) from exc
-        except httpx.RequestError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="AI service is unreachable.",
-            ) from exc
+        last_exc: httpx.RequestError | None = None
+        for attempt in range(1, self._AI_SERVICE_MAX_ATTEMPTS + 1):
+            try:
+                with httpx.Client(timeout=60.0) as client:
+                    resp = client.post(url, json=payload)
+                resp.raise_for_status()
+                return resp.json()
+            except httpx.HTTPStatusError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail=f"AI service error: {exc.response.status_code}",
+                ) from exc
+            except httpx.RequestError as exc:
+                last_exc = exc
+                logger.warning(
+                    f"[report-chat] AI 서비스 연결 실패 (attempt {attempt}/"
+                    f"{self._AI_SERVICE_MAX_ATTEMPTS}): {exc}"
+                )
+
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI service is unreachable.",
+        ) from last_exc
