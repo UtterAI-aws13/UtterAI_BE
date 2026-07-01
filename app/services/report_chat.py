@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 
 import httpx
@@ -33,6 +34,7 @@ _SECTION_TYPE_MAP: dict[str, ReportSegmentType] = {
 }
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 
 class ReportChatService:
@@ -95,6 +97,15 @@ class ReportChatService:
         )
 
         patch_read: PatchProposalRead | None = None
+        if patch_data and patch_data.get("target_section") not in _SECTION_TYPE_MAP:
+            # AI 서비스는 신뢰 경계 밖이다 — 스키마 제약이 있어도 예상 밖 값이 오면
+            # report_patch_proposals.target_section(VARCHAR(20)) insert가 깨져
+            # 채팅 응답 전체가 500으로 죽는다. patch만 버리고 assistant_message는 살린다.
+            logger.warning(
+                f"[report-chat] 알 수 없는 target_section 무시: {patch_data.get('target_section')!r}"
+            )
+            patch_data = None
+
         if patch_data:
             proposal = self._chat_repo.save_patch_proposal(
                 thread_id=thread.id,
