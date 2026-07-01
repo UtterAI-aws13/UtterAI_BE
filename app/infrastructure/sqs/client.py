@@ -43,6 +43,8 @@ class SQSClient:
         ) as span:
             span.set_attribute("messaging.system", "aws_sqs")
             span.set_attribute("messaging.destination.name", queue)
+            if payload.get("user_id"):
+                span.set_attribute("user.id", str(payload["user_id"]))
 
             carrier: dict[str, str] = {}
             inject(carrier)

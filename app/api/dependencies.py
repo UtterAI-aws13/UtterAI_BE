@@ -3,6 +3,7 @@
 from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
+from opentelemetry import trace
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db_session
@@ -46,7 +47,11 @@ def get_current_user(
     if user is None or user.status != UserStatus.ACTIVE:
         raise credentials_exception
 
-    return UserRead.model_validate(user)
+    resolved = UserRead.model_validate(user)
+    span = trace.get_current_span()
+    span.set_attribute("user.id", str(resolved.id))
+    span.set_attribute("user.email", resolved.email)
+    return resolved
 
 
 def verify_internal_token(
