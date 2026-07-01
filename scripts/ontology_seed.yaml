@@ -1,0 +1,427 @@
+# 인사이트맵 기준 지식 레이어 시드 데이터.
+#
+# concepts는 UtterAI_AI/app/rag/ontology.yaml(RAG 쿼리 확장용 개념 사전)의 concept_key/
+# related_terms/language_area를 그대로 가져오되, ontology_concepts 테이블에 필요한
+# concept_type(metric/disorder/intervention/assessment_tool/linguistic_construct/
+# clinical_documentation/process)을 추가로 분류했다.
+#
+# edges는 두 온톨로지 문서 어디에도 없던 신규 정보다 — "03. 온톨로지맵 설계서" 3.1절의
+# MLU 예시 체인을 시작으로, 38개 concept 전부가 최소 1개 이상의 관계를 갖도록 SLP
+# 도메인 지식 기준으로 확장했다. confidence는 관계의 확실성을 나타내는 주관적 가중치이며,
+# 실제 임상 문헌 인용 근거(evidence_source_ids)가 아직 없는 상태다 — 문헌 연결은 후속 작업.
+
+concepts:
+  MLU:
+    label: "MLU"
+    synonyms: ["평균 발화 길이", "형태소 수", "문장 길이", "발화 복잡도", "표현언어", "MLU-w", "MLU-m", "MLU-e", "LLU", "K-ALAS", "어절", "발화 수"]
+    language_area: "expressive_language"
+    concept_type: "metric"
+  TTR:
+    label: "TTR"
+    synonyms: ["Type Token Ratio", "어휘 다양성", "어휘 다양도", "NDW", "NTW", "어휘 다양성 지수", "K-ALAS"]
+    language_area: "vocabulary"
+    concept_type: "metric"
+  NDW:
+    label: "NDW"
+    synonyms: ["Number of Different Words", "어휘 다양성", "서로 다른 낱말"]
+    language_area: "vocabulary"
+    concept_type: "metric"
+  NTW:
+    label: "NTW"
+    synonyms: ["Number of Total Words", "총 발화량", "발화량"]
+    language_area: "expressive_language"
+    concept_type: "metric"
+  response_latency:
+    label: "반응 지연 시간"
+    synonyms: ["반응 지연", "발화 반응 시간", "차례 맞추기", "대화 차례"]
+    language_area: "pragmatics"
+    concept_type: "metric"
+  SOAP_note:
+    label: "SOAP 노트"
+    synonyms: ["SOAP Note", "세션 기록", "치료 기록", "임상 기록", "리포트"]
+    language_area: "clinical_documentation"
+    concept_type: "clinical_documentation"
+  diarization:
+    label: "화자 분리"
+    synonyms: ["화자 구분", "아동 발화", "치료사 발화"]
+    language_area: "speech_processing"
+    concept_type: "process"
+  LLU:
+    label: "최장 발화 길이"
+    synonyms: ["최장발화길이", "발화 복잡도", "문장 복잡성", "Longest Length of Utterance", "LLU-m", "LLU-w", "LLU-e"]
+    language_area: "expressive_language"
+    concept_type: "metric"
+  PCC:
+    label: "자음정확도"
+    synonyms: ["자음 정확도", "조음 정확도", "말소리 오류", "음소 오류", "U-TAP2", "APAC", "Percent Consonants Correct", "조음장애", "음운변동"]
+    language_area: "phonology"
+    concept_type: "metric"
+  grammatical_morpheme:
+    label: "문법형태소"
+    synonyms: ["조사 오류", "어미 오류", "격조사", "주격조사", "목적격조사", "연결어미", "종결어미", "문법형태소 누락", "형태통사", "조사 누락", "어미 누락"]
+    language_area: "morphosyntax"
+    concept_type: "linguistic_construct"
+  turn_taking:
+    label: "대화 차례"
+    synonyms: ["차례 주고받기", "발화 교대", "반응 시작", "대화 개시", "화용 상호작용", "자발 발화", "Turn-taking"]
+    language_area: "pragmatics"
+    concept_type: "linguistic_construct"
+  CIU:
+    label: "맥락적 정보 단위"
+    synonyms: ["Correct Information Unit", "담화 정보량", "정보 전달 효율성", "%CIU", "CIU/min", "분당 CIU", "Main Concept Analysis", "담화 분석"]
+    language_area: "narrative_discourse"
+    concept_type: "metric"
+  aphasia:
+    label: "실어증"
+    synonyms: ["Broca 실어증", "Wernicke 실어증", "전도성 실어증", "전반성 실어증", "명칭 실어증", "이름대기 장애", "PK-WAB", "K-BNT", "단어 찾기 어려움", "착어", "의미착어", "음운착어", "신조어", "우회표현"]
+    language_area: "expressive_language"
+    concept_type: "disorder"
+  cognitive_communication:
+    label: "인지-의사소통"
+    synonyms: ["TBI", "외상성 뇌손상", "치매", "우반구 손상", "주의 장애", "기억 장애", "집행기능", "담화 조직화", "추론", "인지-의사소통 장애"]
+    language_area: "cognitive_communication"
+    concept_type: "disorder"
+  motor_speech:
+    label: "말운동장애"
+    synonyms: ["마비말장애", "말실행증", "말 명료도", "조음 오류", "말속도", "운율", "dysarthria", "apraxia of speech", "발성", "공명", "호흡 지지"]
+    language_area: "motor_speech"
+    concept_type: "disorder"
+  narrative_discourse:
+    label: "이야기 담화"
+    synonyms: ["이야기 문법", "에피소드 구조", "이야기 구성", "담화 능력", "설명 담화", "이야기 산출", "이야기 이해"]
+    language_area: "narrative_discourse"
+    concept_type: "linguistic_construct"
+  AAC:
+    label: "보완대체의사소통"
+    synonyms: ["Augmentative Alternative Communication", "그림 교환", "PECS", "음성출력기기", "보완대체 의사소통", "비구어", "AAC 도구"]
+    language_area: "aac"
+    concept_type: "intervention"
+  assessment_tools:
+    label: "언어평가 도구"
+    synonyms: ["PRES", "SELSI", "REVT", "MCDI-K", "U-TAP2", "APAC", "P-FA", "K-ALAS", "KLA", "LSSC", "KOPLAC", "PK-WAB", "K-BNT"]
+    language_area: "expressive_language"
+    concept_type: "assessment_tool"
+  language_delay:
+    label: "언어발달지연"
+    synonyms: ["단순언어발달지연", "발달성 언어장애", "DLD", "언어지연", "말 늦은 아동", "표현언어 지연", "수용언어 지연"]
+    language_area: "expressive_language"
+    concept_type: "disorder"
+  ASD:
+    label: "자폐스펙트럼장애"
+    synonyms: ["자폐 스펙트럼", "사회적 의사소통", "공동주의", "상호작용", "반향어", "echolalia", "화용 어려움"]
+    language_area: "pragmatics"
+    concept_type: "disorder"
+  eojeol:
+    label: "어절"
+    synonyms: ["띄어쓰기 단위", "낱말 단위", "word unit", "Korean word", "어절 수", "NTJ", "NDJ"]
+    language_area: "morphosyntax"
+    concept_type: "linguistic_construct"
+  case_particle:
+    label: "격조사"
+    synonyms: ["주격조사", "목적격조사", "부사격조사", "관형격조사", "처소격조사", "공동격조사", "조사 생략", "조사 대치", "조사 누락", "-이/-가", "-을/-를", "-에", "-에서", "-의"]
+    language_area: "morphosyntax"
+    concept_type: "linguistic_construct"
+  connective_ending:
+    label: "연결어미"
+    synonyms: ["어미 오류", "종결어미", "전성어미", "문장 연결", "복문", "-고", "-서", "-는데", "-면", "-기", "어미 누락", "어미 대치"]
+    language_area: "morphosyntax"
+    concept_type: "linguistic_construct"
+  phonological_process:
+    label: "음운변동"
+    synonyms: ["음운 과정", "대치", "생략", "첨가", "동화", "경음화", "축약", "종성 오류", "어말 자음 생략", "파열음화", "전설음화", "음소 오류 패턴"]
+    language_area: "phonology"
+    concept_type: "disorder"
+  disfluency:
+    label: "비유창성"
+    synonyms: ["반복", "연장", "막힘", "간투사", "수정", "머뭇거림", "삽입", "미완성 발화", "말더듬", "비유창성 빈도", "P-FA"]
+    language_area: "fluency"
+    concept_type: "disorder"
+  main_concept:
+    label: "핵심개념분석"
+    synonyms: ["Main Concept Analysis", "MCA", "담화 핵심 정보", "정보 단위", "핵심 개념 전달", "AphasiaBank"]
+    language_area: "narrative_discourse"
+    concept_type: "metric"
+  functional_goal:
+    label: "기능적 목표"
+    synonyms: ["일상 의사소통", "활동 참여", "ICF", "기능적 의사소통", "보호자 교육", "가정 연계", "FCM", "ASHA-FACS", "WHO ICF"]
+    language_area: "functional_communication"
+    concept_type: "linguistic_construct"
+  DLD:
+    label: "발달성 언어장애"
+    synonyms: ["Developmental Language Disorder", "언어발달지연", "후기 말문", "말 늦은 아동", "언어 학습 어려움", "문법 오류", "가족력", "지속적 언어 어려움"]
+    language_area: "expressive_language"
+    concept_type: "disorder"
+  milieu_teaching:
+    label: "환경중심언어중재"
+    synonyms: ["Milieu Teaching", "우발교수", "시간지연", "자연적 강화", "아동 주도", "모델링", "확장", "보호자 코칭"]
+    language_area: "expressive_language"
+    concept_type: "intervention"
+  sentence_expansion_modeling:
+    label: "문장 확장 모델링"
+    synonyms: ["Sentence Expansion", "확장 모델링", "발화 확장", "expansion"]
+    language_area: "expressive_language"
+    concept_type: "intervention"
+  short_utterance:
+    label: "짧은 발화"
+    synonyms: ["단문 위주 발화", "짧은 문장", "간단한 발화"]
+    language_area: "expressive_language"
+    concept_type: "disorder"
+  utterance_length:
+    label: "발화 길이"
+    synonyms: ["문장 길이", "발화 단위 길이"]
+    language_area: "expressive_language"
+    concept_type: "linguistic_construct"
+  TBI:
+    label: "외상성 뇌손상"
+    synonyms: ["Traumatic Brain Injury", "인지-의사소통", "집행기능", "자기인식", "메타인지", "미래 기억", "직장 복귀", "보상 전략"]
+    language_area: "cognitive_communication"
+    concept_type: "disorder"
+  dementia:
+    label: "치매"
+    synonyms: ["인지 저하", "경도인지장애", "MCI", "알츠하이머병", "반복 질문", "기억 보조", "의사소통 파트너", "진행성 언어 변화"]
+    language_area: "cognitive_communication"
+    concept_type: "disorder"
+  dysarthria:
+    label: "마비말장애"
+    synonyms: ["말 명료도", "이해가능성", "호흡", "발성", "조음", "공명", "운율", "이완형", "경직형", "실조형", "저운동형", "과운동형"]
+    language_area: "motor_speech"
+    concept_type: "disorder"
+  FCM:
+    label: "기능적 의사소통 척도"
+    synonyms: ["Functional Communication Measure", "ASHA NOMS", "기능적 결과", "활동 참여", "지원 수준", "의사소통 독립성"]
+    language_area: "functional_communication"
+    concept_type: "metric"
+  voice_disorder:
+    label: "음성장애"
+    synonyms: ["쉰 목소리", "애성", "음질", "음도", "음성 강도", "발성 노력", "후두 검사", "음성위생", "공명음성", "VHI"]
+    language_area: "voice"
+    concept_type: "disorder"
+  expressive_language:
+    label: "표현언어"
+    synonyms: ["표현 언어", "Expressive Language"]
+    language_area: "expressive_language"
+    concept_type: "language_area"
+
+edges:
+  - source: "MLU"
+    target: "utterance_length"
+    relation_type: "measures"
+    confidence: 1.0
+  - source: "MLU"
+    target: "expressive_language"
+    relation_type: "belongs_to"
+    confidence: 1.0
+  - source: "MLU"
+    target: "short_utterance"
+    relation_type: "related_to"
+    confidence: 0.8
+  - source: "short_utterance"
+    target: "sentence_expansion_modeling"
+    relation_type: "related_intervention"
+    confidence: 0.8
+  - source: "short_utterance"
+    target: "milieu_teaching"
+    relation_type: "related_intervention"
+    confidence: 0.6
+  - source: "TTR"
+    target: "NDW"
+    relation_type: "measures"
+    confidence: 0.9
+  - source: "TTR"
+    target: "NTW"
+    relation_type: "measures"
+    confidence: 0.9
+  - source: "language_delay"
+    target: "DLD"
+    relation_type: "related_to"
+    confidence: 0.7
+  - source: "language_delay"
+    target: "milieu_teaching"
+    relation_type: "related_intervention"
+    confidence: 0.6
+  - source: "ASD"
+    target: "turn_taking"
+    relation_type: "related_to"
+    confidence: 0.7
+  - source: "aphasia"
+    target: "main_concept"
+    relation_type: "related_to"
+    confidence: 0.7
+  - source: "aphasia"
+    target: "CIU"
+    relation_type: "related_to"
+    confidence: 0.7
+  - source: "dysarthria"
+    target: "motor_speech"
+    relation_type: "belongs_to"
+    confidence: 1.0
+  - source: "phonological_process"
+    target: "PCC"
+    relation_type: "measures"
+    confidence: 0.6
+
+  # ── 확장분: 도메인 관계 채움 (아래부터 신규) ──
+  - source: "LLU"
+    target: "utterance_length"
+    relation_type: "measures"
+    confidence: 0.9
+  - source: "LLU"
+    target: "expressive_language"
+    relation_type: "belongs_to"
+    confidence: 1.0
+  - source: "LLU"
+    target: "MLU"
+    relation_type: "related_to"
+    confidence: 0.6
+  - source: "NTW"
+    target: "expressive_language"
+    relation_type: "belongs_to"
+    confidence: 1.0
+  - source: "response_latency"
+    target: "turn_taking"
+    relation_type: "related_to"
+    confidence: 0.8
+  - source: "response_latency"
+    target: "TBI"
+    relation_type: "related_to"
+    confidence: 0.5
+  - source: "SOAP_note"
+    target: "functional_goal"
+    relation_type: "related_to"
+    confidence: 0.7
+  - source: "SOAP_note"
+    target: "assessment_tools"
+    relation_type: "related_to"
+    confidence: 0.6
+  - source: "diarization"
+    target: "SOAP_note"
+    relation_type: "related_to"
+    confidence: 0.7
+  - source: "grammatical_morpheme"
+    target: "case_particle"
+    relation_type: "related_to"
+    confidence: 0.9
+  - source: "grammatical_morpheme"
+    target: "connective_ending"
+    relation_type: "related_to"
+    confidence: 0.9
+  - source: "grammatical_morpheme"
+    target: "DLD"
+    relation_type: "related_to"
+    confidence: 0.7
+  - source: "grammatical_morpheme"
+    target: "eojeol"
+    relation_type: "related_to"
+    confidence: 0.6
+  - source: "case_particle"
+    target: "eojeol"
+    relation_type: "belongs_to"
+    confidence: 0.8
+  - source: "connective_ending"
+    target: "eojeol"
+    relation_type: "belongs_to"
+    confidence: 0.8
+  - source: "turn_taking"
+    target: "functional_goal"
+    relation_type: "related_to"
+    confidence: 0.6
+  - source: "turn_taking"
+    target: "milieu_teaching"
+    relation_type: "related_intervention"
+    confidence: 0.7
+  - source: "CIU"
+    target: "narrative_discourse"
+    relation_type: "belongs_to"
+    confidence: 0.8
+  - source: "CIU"
+    target: "main_concept"
+    relation_type: "related_to"
+    confidence: 0.7
+  - source: "main_concept"
+    target: "narrative_discourse"
+    relation_type: "belongs_to"
+    confidence: 0.8
+  - source: "aphasia"
+    target: "assessment_tools"
+    relation_type: "related_to"
+    confidence: 0.7
+  - source: "aphasia"
+    target: "functional_goal"
+    relation_type: "related_to"
+    confidence: 0.6
+  - source: "TBI"
+    target: "cognitive_communication"
+    relation_type: "related_to"
+    confidence: 0.8
+  - source: "dementia"
+    target: "cognitive_communication"
+    relation_type: "related_to"
+    confidence: 0.8
+  - source: "cognitive_communication"
+    target: "narrative_discourse"
+    relation_type: "related_to"
+    confidence: 0.6
+  - source: "motor_speech"
+    target: "voice_disorder"
+    relation_type: "related_to"
+    confidence: 0.5
+  - source: "AAC"
+    target: "functional_goal"
+    relation_type: "related_intervention"
+    confidence: 0.7
+  - source: "AAC"
+    target: "ASD"
+    relation_type: "related_intervention"
+    confidence: 0.7
+  - source: "AAC"
+    target: "TBI"
+    relation_type: "related_intervention"
+    confidence: 0.5
+  - source: "assessment_tools"
+    target: "language_delay"
+    relation_type: "related_to"
+    confidence: 0.7
+  - source: "assessment_tools"
+    target: "DLD"
+    relation_type: "related_to"
+    confidence: 0.7
+  - source: "assessment_tools"
+    target: "phonological_process"
+    relation_type: "related_to"
+    confidence: 0.7
+  - source: "language_delay"
+    target: "expressive_language"
+    relation_type: "belongs_to"
+    confidence: 0.8
+  - source: "DLD"
+    target: "expressive_language"
+    relation_type: "belongs_to"
+    confidence: 0.8
+  - source: "ASD"
+    target: "functional_goal"
+    relation_type: "related_to"
+    confidence: 0.6
+  - source: "disfluency"
+    target: "functional_goal"
+    relation_type: "related_to"
+    confidence: 0.5
+  - source: "disfluency"
+    target: "assessment_tools"
+    relation_type: "related_to"
+    confidence: 0.6
+  - source: "functional_goal"
+    target: "FCM"
+    relation_type: "measures"
+    confidence: 0.8
+  - source: "dementia"
+    target: "functional_goal"
+    relation_type: "related_to"
+    confidence: 0.5
+  - source: "TBI"
+    target: "functional_goal"
+    relation_type: "related_to"
+    confidence: 0.5
+  - source: "voice_disorder"
+    target: "functional_goal"
+    relation_type: "related_to"
+    confidence: 0.5
