@@ -104,3 +104,14 @@ class ReportSegmentType(StrEnum):
     CUSTOM = "CUSTOM"
 
 
+class ReportChatThreadStatus(StrEnum):
+    ACTIVE = "ACTIVE"
+    CLOSED = "CLOSED"
+
+
+class ReportPatchStatus(StrEnum):
+    PENDING = "PENDING"
+    APPLIED = "APPLIED"
+    REJECTED = "REJECTED"
+
+

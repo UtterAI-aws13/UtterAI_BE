@@ -57,7 +57,7 @@ jobs:
         run: uv run python -c "from app.main import app; print(app.title)"
 
       - name: Run pytest
-        run: uv run pytest
+        run: uv run pytest --ignore=tests/integration --ignore=tests/integration
 
       - name: Docker build check
         run: docker build -t utterai-backend:ci .

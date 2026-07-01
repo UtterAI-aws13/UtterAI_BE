@@ -12,6 +12,8 @@ from app.core.enums import (
     AnalysisJobStatus,
     AudioFileStatus,
     PatientStatus,
+    ReportChatThreadStatus,
+    ReportPatchStatus,
     ReportSegmentType,
     ReportStatus,
     SessionStatus,
@@ -302,6 +304,7 @@ class Report(Base):
     s3_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     generated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
 
 
 class ReportSegment(Base):
@@ -325,4 +328,89 @@ class ReportSegment(Base):
     edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
+class ReportChatThread(Base):
+    __tablename__ = "report_chat_threads"
 
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    report_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("reports.id", ondelete="RESTRICT"), nullable=False
+    )
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="RESTRICT"), nullable=False
+    )
+    patient_ref_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("patient_refs.id", ondelete="RESTRICT"), nullable=False
+    )
+    therapist_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    status: Mapped[ReportChatThreadStatus] = mapped_column(
+        Enum(ReportChatThreadStatus, name="report_chat_thread_status"),
+        nullable=False,
+        default=ReportChatThreadStatus.ACTIVE,
+        server_default=ReportChatThreadStatus.ACTIVE.value,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class ReportChatMessage(Base):
+    __tablename__ = "report_chat_messages"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    thread_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("report_chat_threads.id", ondelete="CASCADE"), nullable=False
+    )
+    role: Mapped[str] = mapped_column(String(20), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    intent: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    tool_calls: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class ReportPatchProposal(Base):
+    __tablename__ = "report_patch_proposals"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    thread_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("report_chat_threads.id", ondelete="RESTRICT"), nullable=False
+    )
+    report_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("reports.id", ondelete="RESTRICT"), nullable=False
+    )
+    base_report_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    target_section: Mapped[str] = mapped_column(String(20), nullable=False)
+    original_text: Mapped[str] = mapped_column(Text, nullable=False)
+    proposed_text: Mapped[str] = mapped_column(Text, nullable=False)
+    rationale: Mapped[str | None] = mapped_column(Text, nullable=True)
+    evidence_refs: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    status: Mapped[ReportPatchStatus] = mapped_column(
+        Enum(ReportPatchStatus, name="report_patch_status"),
+        nullable=False,
+        default=ReportPatchStatus.PENDING,
+        server_default=ReportPatchStatus.PENDING.value,
+    )
+    created_by_message_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("report_chat_messages.id", ondelete="SET NULL"), nullable=True
+    )
+    applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class ReportDraftRevision(Base):
+    __tablename__ = "report_draft_revisions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    report_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("reports.id", ondelete="RESTRICT"), nullable=False
+    )
+    patch_proposal_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("report_patch_proposals.id", ondelete="SET NULL"), nullable=True
+    )
+    version_before: Mapped[int] = mapped_column(Integer, nullable=False)
+    version_after: Mapped[int] = mapped_column(Integer, nullable=False)
+    changed_sections: Mapped[list] = mapped_column(JSONB, nullable=False)
+    approved_by: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

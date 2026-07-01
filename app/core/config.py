@@ -53,6 +53,8 @@ class Settings(BaseSettings):
     sqs_audio_preprocess_queue_url: str = ""
     sqs_report_analysis_queue_url: str = ""
 
+    ai_service_base_url: str = "http://localhost:8001"
+
     otel_service_name: str = "backend"
     otel_exporter_otlp_endpoint: str = "http://localhost:4318"
     otel_exporter_otlp_protocol: str = "http/protobuf"
