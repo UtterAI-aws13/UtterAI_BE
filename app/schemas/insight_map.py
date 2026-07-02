@@ -35,3 +35,14 @@ class InsightMapSearchRequest(BaseModel):
 
 class SourceLinkResponse(BaseModel):
     url: str
+
+
+class EvidenceItem(BaseModel):
+    title: str
+    content: str
+    score: float
+    doi_url: str | None = None
+
+
+class EvidenceResponse(BaseModel):
+    evidence: list[EvidenceItem]

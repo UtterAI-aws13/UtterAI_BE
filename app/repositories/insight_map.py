@@ -7,7 +7,7 @@ import uuid
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models.entities import OntologyConcept, OntologyEdge, PatientMetricTrend, SoapCaseIndex
+from app.models.entities import OntologyConcept, OntologyEdge, PatientMetricTrend, Session as SessionEntity, SoapCaseIndex
 
 
 class InsightMapRepository:
@@ -74,13 +74,34 @@ class InsightMapRepository:
         therapist_id: uuid.UUID,
         concept_ids: list[uuid.UUID] | None = None,
     ) -> list[SoapCaseIndex]:
-        """내 SOAP 기록만 반환한다 — therapist_id는 항상 현재 사용자로 강제한다 (IDOR 방지)."""
+        """특정 환자에 대해 내 SOAP 기록만 반환한다 — therapist_id는 항상 현재 사용자로 강제한다 (IDOR 방지)."""
         statement = select(SoapCaseIndex).where(
             SoapCaseIndex.patient_ref_id == patient_ref_id,
             SoapCaseIndex.therapist_id == therapist_id,
         )
-        case_indexes = list(self.db.execute(statement).scalars().all())
+        return self._filter_by_concepts(list(self.db.execute(statement).scalars().all()), concept_ids)
+
+    def list_case_indexes_by_therapist(
+        self,
+        therapist_id: uuid.UUID,
+        concept_ids: list[uuid.UUID] | None = None,
+    ) -> list[SoapCaseIndex]:
+        """환자 지정 없이 — 현재 치료사가 담당한 모든 환자의 내 SOAP 기록을 반환한다."""
+        statement = select(SoapCaseIndex).where(SoapCaseIndex.therapist_id == therapist_id)
+        return self._filter_by_concepts(list(self.db.execute(statement).scalars().all()), concept_ids)
+
+    @staticmethod
+    def _filter_by_concepts(
+        case_indexes: list[SoapCaseIndex], concept_ids: list[uuid.UUID] | None
+    ) -> list[SoapCaseIndex]:
         if concept_ids is None:
             return case_indexes
         concept_id_strs = {str(cid) for cid in concept_ids}
         return [ci for ci in case_indexes if concept_id_strs & {str(c) for c in (ci.concept_ids or [])}]
+
+    def get_session_dates(self, session_ids: list[uuid.UUID]) -> dict[uuid.UUID, object]:
+        """session_id -> session_date 매핑. 인사이트맵 노드에 세션 날짜를 표시하기 위한 용도."""
+        if not session_ids:
+            return {}
+        statement = select(SessionEntity.id, SessionEntity.session_date).where(SessionEntity.id.in_(session_ids))
+        return dict(self.db.execute(statement).all())

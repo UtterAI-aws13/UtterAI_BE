@@ -5,6 +5,7 @@ from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
+from fastapi import HTTPException
 
 from app.core.enums import UserRole, UserStatus
 from app.models.entities import OntologyConcept, OntologyEdge, Report, Session as SessionEntity, SoapCaseIndex
@@ -96,18 +97,42 @@ class TestGetInsightMap:
 
         service._repo.list_case_indexes.assert_called_once_with(session.patient_ref_id, user.id, None)
 
-    def test_without_report_draft_id_only_returns_research_layer(self, service):
+    def test_without_report_draft_id_drops_current_patient_but_keeps_my_soap(self, service):
         user = _make_user()
         mlu = _concept("MLU")
         service._repo.list_concepts.return_value = [mlu]
         service._repo.list_edges.return_value = []
+        service._repo.list_case_indexes_by_therapist.return_value = []
+        service._repo.get_session_dates.return_value = {}
 
         result = service.get_insight_map(None, ["research", "current_patient", "my_soap"], user)
 
         service._session_repo.get_by_id.assert_not_called()
         service._repo.list_case_indexes.assert_not_called()
         service._repo.list_patient_metric_trends.assert_not_called()
+        service._repo.list_case_indexes_by_therapist.assert_called_once_with(user.id, [mlu.id])
         assert {n.id for n in result.nodes} == {"concept_mlu"}
+
+    def test_without_report_draft_id_my_soap_lists_all_patients_for_therapist(self, service):
+        user = _make_user()
+        case_index = MagicMock(spec=SoapCaseIndex)
+        case_index.id = uuid.uuid4()
+        case_index.session_id = uuid.uuid4()
+        case_index.report_id = uuid.uuid4()
+        case_index.observed_issue = "짧은 발화"
+        case_index.metric = None
+        case_index.summary = "요약"
+        case_index.concept_ids = []
+
+        service._repo.list_concepts.return_value = []
+        service._repo.list_case_indexes_by_therapist.return_value = [case_index]
+        service._repo.get_session_dates.return_value = {}
+
+        result = service.get_insight_map(None, ["my_soap"], user)
+
+        service._repo.list_case_indexes_by_therapist.assert_called_once_with(user.id, None)
+        assert len(result.nodes) == 1
+        assert result.nodes[0].label == "짧은 발화"
 
 
 class TestSearch:
@@ -136,16 +161,49 @@ class TestSearch:
         service._repo.find_concepts_by_key.assert_called_once_with(["mlu"])
         assert {n.id for n in result.nodes} == {"concept_mlu"}
 
-    def test_without_report_draft_id_drops_patient_and_soap_modes(self, service):
+    def test_without_report_draft_id_drops_current_patient_but_keeps_my_soap(self, service):
         user = _make_user()
         service._repo.find_concepts_by_key.return_value = []
         service._repo.search_concepts_by_term.return_value = []
+        service._repo.list_case_indexes_by_therapist.return_value = []
+        service._repo.get_session_dates.return_value = {}
 
         with patch.object(service, "_resolve_query", return_value=[]):
             service.search("아무개념", None, ["research", "current_patient", "my_soap"], user)
 
         service._repo.list_case_indexes.assert_not_called()
         service._repo.list_patient_metric_trends.assert_not_called()
+        service._repo.list_case_indexes_by_therapist.assert_called_once_with(user.id, None)
+
+
+class TestGetConceptEvidence:
+    def test_404_when_concept_not_found(self, service):
+        user = _make_user()
+        service._repo.find_concepts_by_key.return_value = []
+
+        with pytest.raises(HTTPException) as exc:
+            service.get_concept_evidence("unknown", user)
+        assert exc.value.status_code == 404
+
+    def test_fetches_evidence_using_concept_label_and_synonyms(self, service):
+        user = _make_user()
+        mlu = _concept("MLU")
+        mlu.synonyms = ["평균 발화 길이", "MLU-w"]
+        service._repo.find_concepts_by_key.return_value = [mlu]
+
+        with patch.object(service, "_fetch_evidence") as mock_fetch:
+            service.get_concept_evidence("MLU", user)
+
+        mock_fetch.assert_called_once_with("MLU 평균 발화 길이 MLU-w")
+
+    def test_returns_empty_evidence_when_ai_service_unreachable(self, service):
+        import httpx
+
+        with patch("app.services.insight_map.httpx.Client") as MockClient:
+            MockClient.return_value.__enter__.return_value.post.side_effect = httpx.ConnectError("refused")
+            result = service._fetch_evidence("MLU")
+
+        assert result.evidence == []
 
 
 class TestGetSourceLink:

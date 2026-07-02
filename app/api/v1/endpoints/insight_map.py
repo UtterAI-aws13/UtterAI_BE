@@ -11,6 +11,7 @@ from app.api.dependencies import get_current_user
 from app.core.db import get_db_session
 from app.schemas.auth import UserRead
 from app.schemas.insight_map import (
+    EvidenceResponse,
     InsightMapResponse,
     InsightMapSearchRequest,
     SourceLinkResponse,
@@ -42,6 +43,16 @@ def search_insight_map(
 ) -> InsightMapResponse:
     service = InsightMapService(db)
     return service.search(request.query, request.report_draft_id, request.mode, current_user)
+
+
+@router.get("/concepts/{concept_key}/evidence", response_model=EvidenceResponse)
+def get_concept_evidence(
+    concept_key: str,
+    current_user: UserRead = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> EvidenceResponse:
+    service = InsightMapService(db)
+    return service.get_concept_evidence(concept_key, current_user)
 
 
 @case_index_router.get("/{case_index_id}/source-link", response_model=SourceLinkResponse)

@@ -16,6 +16,8 @@ from app.repositories.insight_map import InsightMapRepository
 from app.repositories.session import SessionRepository
 from app.schemas.auth import UserRead
 from app.schemas.insight_map import (
+    EvidenceItem,
+    EvidenceResponse,
     InsightMapEdge,
     InsightMapNode,
     InsightMapResponse,
@@ -52,9 +54,10 @@ class InsightMapService:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found.")
             patient_ref_id = session.patient_ref_id
         else:
-            # report_draft_id 없이 접근한 경우(사이드바에서 직접 진입) — 환자 히스토리와
-            # 내 SOAP 기록은 특정 리포트/세션에 묶여 있으므로 노출하지 않는다.
-            mode = [m for m in mode if m == "research"]
+            # report_draft_id 없이 접근한 경우(사이드바에서 직접 진입) — 환자 히스토리(지표
+            # 추이)는 특정 환자에 묶여 있어 노출할 수 없지만, 내 SOAP 기록은 담당 환자
+            # 전체를 대상으로 둘러볼 수 있다.
+            mode = [m for m in mode if m in ("research", "my_soap")]
 
         concepts = self._repo.list_concepts() if "research" in mode else []
         return self._build_graph(concepts, patient_ref_id, current_user, mode)
@@ -88,10 +91,21 @@ class InsightMapService:
                 concepts = concepts + self._repo.list_concepts(list(related_ids))
 
         if patient_ref_id is None:
-            # report_draft_id 없이 검색한 경우 환자 히스토리/SOAP 기록은 노출하지 않는다.
-            mode = [m for m in mode if m == "research"]
+            # report_draft_id 없이 검색한 경우 환자 지표 추이는 노출할 수 없지만,
+            # 내 SOAP 기록은 담당 환자 전체를 대상으로 검색할 수 있다.
+            mode = [m for m in mode if m in ("research", "my_soap")]
 
         return self._build_graph(concepts, patient_ref_id, current_user, mode)
+
+    def get_concept_evidence(self, concept_key: str, current_user: UserRead) -> EvidenceResponse:
+        """개념 라벨+동의어로 문헌 근거를 검색한다. 로그인만 하면 누구나 조회 가능(환자 데이터 아님)."""
+        del current_user  # 소유권 검증 불필요 — 온톨로지 개념은 환자 데이터가 아니다.
+        concepts = self._repo.find_concepts_by_key([concept_key])
+        if not concepts:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Concept not found.")
+        concept = concepts[0]
+        query = " ".join([concept.label, *concept.synonyms[:5]])
+        return self._fetch_evidence(query)
 
     def get_source_link(self, case_index_id: uuid.UUID, current_user: UserRead) -> SourceLinkResponse:
         case_index = ensure_case_index_access(self._db, case_index_id, current_user)
@@ -139,10 +153,7 @@ class InsightMapService:
                     )
                 )
 
-        if patient_ref_id is None:
-            return InsightMapResponse(nodes=nodes, edges=edges)
-
-        if "current_patient" in mode:
+        if "current_patient" in mode and patient_ref_id is not None:
             for trend in self._repo.list_patient_metric_trends(patient_ref_id, current_user.id):
                 node_id = f"trend_{trend.id}"
                 nodes.append(
@@ -164,18 +175,32 @@ class InsightMapService:
 
         if "my_soap" in mode:
             concept_ids = [c.id for c in concepts] if concepts else None
-            for case_index in self._repo.list_case_indexes(patient_ref_id, current_user.id, concept_ids):
+            if patient_ref_id is not None:
+                case_indexes = self._repo.list_case_indexes(patient_ref_id, current_user.id, concept_ids)
+            else:
+                # report_draft_id 없이 사이드바에서 직접 진입한 경우 — 담당 환자 전체의
+                # SOAP 기록을 대상으로 한다. therapist_id는 항상 현재 사용자로 강제된다.
+                case_indexes = self._repo.list_case_indexes_by_therapist(current_user.id, concept_ids)
+
+            session_dates = self._repo.get_session_dates([ci.session_id for ci in case_indexes])
+
+            for case_index in case_indexes:
                 node_id = f"caseidx_{case_index.id}"
+                session_date = session_dates.get(case_index.session_id)
+                label = case_index.observed_issue or case_index.metric or "SOAP 기록"
+                if session_date is not None:
+                    label = f"{label} ({session_date.isoformat()})"
                 nodes.append(
                     InsightMapNode(
                         id=node_id,
                         type="soap_case_index",
-                        label=case_index.observed_issue or case_index.metric or "SOAP 기록",
+                        label=label,
                         source_layer="my_soap",
                         summary=case_index.summary,
                         data={
                             "session_id": str(case_index.session_id),
                             "report_id": str(case_index.report_id),
+                            "session_date": session_date.isoformat() if session_date else None,
                         },
                     )
                 )
@@ -191,6 +216,20 @@ class InsightMapService:
         return InsightMapResponse(nodes=nodes, edges=edges)
 
     _AI_SERVICE_MAX_ATTEMPTS = 2
+
+    def _fetch_evidence(self, query: str) -> EvidenceResponse:
+        url = f"{settings.ai_service_base_url}/ai/insight-map/evidence"
+        try:
+            with httpx.Client(timeout=30.0) as client:
+                resp = client.post(url, json={"query": query, "top_k": 3})
+            resp.raise_for_status()
+            data = resp.json()
+            return EvidenceResponse(
+                evidence=[EvidenceItem(**item) for item in data.get("evidence", [])]
+            )
+        except httpx.HTTPError as exc:
+            logger.warning(f"[insight-map] 문헌 근거 조회 실패: {exc}")
+            return EvidenceResponse(evidence=[])
 
     def _resolve_query(self, query: str) -> list[str]:
         """AI 서비스의 insight_query_resolver_agent를 호출해 concept_key 후보를 받는다.
