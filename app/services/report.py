@@ -13,6 +13,7 @@ from app.models.entities import Session as SessionEntity
 from app.repositories.report import ReportRepository
 from app.repositories.session import SessionRepository
 from app.schemas.auth import UserRead
+from app.services.case_index_builder import build_case_index
 from app.schemas.report import (
     ReportRead,
     ReportSegmentRead,
@@ -95,9 +96,20 @@ class ReportService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Deleted reports cannot be updated.",
             )
+        was_finalized = report.status == ReportStatus.FINALIZED
         report.status = request.status
         report.updated_at = datetime.now(UTC)
         updated = self.report_repository.update(report)
+
+        # FINALIZED로 전환되는 시점에만 SOAP case index를 만든다 — 초안 단계에서
+        # 매번 태깅하면 계속 수정되는 리포트마다 불필요한 재계산이 일어난다.
+        if not was_finalized and updated.status == ReportStatus.FINALIZED:
+            session = self.session_repository.get_by_id(updated.session_id)
+            segments = self.report_repository.list_segments(updated.id)
+            if session is not None:
+                build_case_index(self.report_repository.db, updated, session, segments)
+                self.report_repository.db.commit()
+
         return ReportRead.model_validate(updated)
 
     def _get_accessible_session(self, session_id: uuid.UUID, current_user: UserRead) -> SessionEntity:

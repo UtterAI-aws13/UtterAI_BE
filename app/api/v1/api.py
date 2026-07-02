@@ -6,6 +6,8 @@ from app.api.v1.endpoints.analysis import internal_router as analysis_internal_r
 from app.api.v1.endpoints.analysis import router as analysis_router
 from app.api.v1.endpoints.audio import router as audio_router
 from app.api.v1.endpoints.auth import router as auth_router
+from app.api.v1.endpoints.insight_map import case_index_router as soap_case_index_router
+from app.api.v1.endpoints.insight_map import router as insight_map_router
 from app.api.v1.endpoints.patients import router as patients_router
 from app.api.v1.endpoints.report import router as report_router
 from app.api.v1.endpoints.report_chat import router as report_chat_router
@@ -27,6 +29,10 @@ api_v1_router.include_router(report_router, prefix="/reports", tags=["reports"])
 api_v1_router.include_router(report_chat_router, prefix="/reports", tags=["report-chat"])
 api_v1_router.include_router(templates_router, prefix="/templates", tags=["templates"])
 api_v1_router.include_router(transcript_router, prefix="/transcripts", tags=["transcripts"])
+api_v1_router.include_router(insight_map_router, prefix="/insight-map", tags=["insight-map"])
+api_v1_router.include_router(
+    soap_case_index_router, prefix="/soap-case-indexes", tags=["insight-map"]
+)
 api_v1_router.include_router(
     analysis_internal_router,
     prefix="/internal/analysis-jobs",

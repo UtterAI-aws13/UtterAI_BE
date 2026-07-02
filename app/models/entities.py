@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import BigInteger, Boolean, Date, DateTime, Enum, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, Enum, Float, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -414,3 +414,88 @@ class ReportDraftRevision(Base):
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class OntologyConcept(Base):
+    """근거 기반 임상 인사이트맵의 기준 지식 레이어(노드).
+
+    논문/가이드에서 추출한 개념(MLU, TTR, expressive_language 등)을 저장한다.
+    concept_type 예: metric, language_area, observed_issue, intervention.
+    """
+
+    __tablename__ = "ontology_concepts"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    concept_key: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    label: Mapped[str] = mapped_column(String(255), nullable=False)
+    synonyms: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    language_area: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    concept_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class OntologyEdge(Base):
+    """개념 간 관계(엣지). relation_type 예: measures, belongs_to, related_to, related_intervention."""
+
+    __tablename__ = "ontology_edges"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    source_concept_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("ontology_concepts.id", ondelete="CASCADE"), nullable=False
+    )
+    target_concept_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("ontology_concepts.id", ondelete="CASCADE"), nullable=False
+    )
+    relation_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    evidence_source_ids: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    confidence: Mapped[float | None] = mapped_column(Numeric, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class SoapCaseIndex(Base):
+    """SOAP note(=Report) 원문에서 추출한 구조화 색인.
+
+    원문은 저장하지 않는다 — report_id만 참조하고, 상세 조회는 별도 권한 검증 API를 거친다.
+    """
+
+    __tablename__ = "soap_case_indexes"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    patient_ref_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("patient_refs.id", ondelete="RESTRICT"), nullable=False
+    )
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="RESTRICT"), nullable=False
+    )
+    report_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("reports.id", ondelete="RESTRICT"), nullable=False
+    )
+    therapist_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    language_area: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    metric: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    observed_issue: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    intervention: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    age_band: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    summary: Mapped[str] = mapped_column(Text, nullable=False)
+    concept_ids: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class PatientMetricTrend(Base):
+    """환자별 지표 추이 스냅샷. trend_json에 세션별 시계열 값을 저장한다."""
+
+    __tablename__ = "patient_metric_trends"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    patient_ref_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("patient_refs.id", ondelete="RESTRICT"), nullable=False
+    )
+    therapist_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    metric: Mapped[str] = mapped_column(String(100), nullable=False)
+    trend_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
