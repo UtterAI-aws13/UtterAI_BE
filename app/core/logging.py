@@ -4,8 +4,16 @@ from __future__ import annotations
 
 import json
 import logging
+from contextvars import ContextVar
 
 from opentelemetry import trace
+
+_user_email_var: ContextVar[str] = ContextVar('user_email', default='')
+
+
+def set_request_user_email(email: str) -> None:
+    _user_email_var.set(email)
+
 
 _SKIP_ATTRS = frozenset((
     "name", "msg", "args", "levelname", "levelno",
@@ -32,6 +40,10 @@ class OtelJsonFormatter(logging.Formatter):
             "trace_id": format(ctx.trace_id, "032x") if ctx.is_valid else "",
             "span_id": format(ctx.span_id, "016x") if ctx.is_valid else "",
         }
+
+        user_email = _user_email_var.get()
+        if user_email:
+            entry["user_email"] = user_email
 
         for key, val in record.__dict__.items():
             if key not in _SKIP_ATTRS and not key.startswith("_"):
