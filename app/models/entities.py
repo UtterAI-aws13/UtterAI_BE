@@ -499,3 +499,104 @@ class PatientMetricTrend(Base):
     metric: Mapped[str] = mapped_column(String(100), nullable=False)
     trend_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class ReportGenerationRun(Base):
+    """Strands Graph 기반 5-Agent 리포트 생성 1회 실행 기록.
+
+    status는 pg ENUM이 아니라 plain VARCHAR다 — Graph 실행 중 자주 갱신되므로
+    ENUM 타입 변경 마이그레이션 비용을 피한다. 값은 ReportGenerationRunStatus로
+    애플리케이션 레벨에서 검증한다.
+    """
+
+    __tablename__ = "report_generation_runs"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="RESTRICT"), nullable=False
+    )
+    patient_ref_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("patient_refs.id", ondelete="RESTRICT"), nullable=False
+    )
+    therapist_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    current_node: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    agent_runtime: Mapped[str] = mapped_column(String(64), nullable=False, default="agentcore", server_default="agentcore")
+    graph_version: Mapped[str] = mapped_column(String(64), nullable=False)
+
+    context_agent_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    research_agent_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    critic_agent_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    report_agent_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    qa_agent_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+    model_config_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    retry_budget_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    quality_scores_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    failure_code: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    failure_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    trace_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ReportDraft(Base):
+    """5-Agent Graph가 생성한 SOAP 리포트 초안.
+
+    QA/deterministic validation을 모두 통과한 결과만 status='DRAFT'로 저장된다.
+    Agent는 이 테이블을 최종 확정(FINALIZED)하지 않는다 — 치료사가 기존
+    reports 워크플로에서 검토 후 확정한다. report_draft_revisions와는 무관하다
+    (그쪽은 이미 확정된 reports 행의 수정 이력).
+    """
+
+    __tablename__ = "report_drafts"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    generation_run_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("report_generation_runs.id", ondelete="RESTRICT"), nullable=False
+    )
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="RESTRICT"), nullable=False
+    )
+    patient_ref_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("patient_refs.id", ondelete="RESTRICT"), nullable=False
+    )
+    therapist_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="DRAFT", server_default="DRAFT")
+    soap_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    reasoning_summary_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    claims_json: Mapped[list] = mapped_column(JSONB, nullable=False)
+    evidence_trace_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    validation_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    quality_scores_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class ReportGenerationEvent(Base):
+    """report_generation_runs의 노드별 진행 이벤트. 민감 원문 없이 실행 상태만 기록한다."""
+
+    __tablename__ = "report_generation_events"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    run_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("report_generation_runs.id", ondelete="CASCADE"), nullable=False
+    )
+    node_name: Mapped[str] = mapped_column(String(64), nullable=False)
+    event_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    decision: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    retry_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    duration_ms: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    token_usage_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    metadata_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
