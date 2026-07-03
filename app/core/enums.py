@@ -115,3 +115,23 @@ class ReportPatchStatus(StrEnum):
     REJECTED = "REJECTED"
 
 
+class ReportGenerationRunStatus(StrEnum):
+    """report_generation_runs.status. plain VARCHAR 컬럼이라 pg ENUM으로 강제하지
+    않고 애플리케이션 레벨에서만 검증한다 (5-Agent Graph가 값을 자주 갱신하므로
+    ENUM 타입 변경 마이그레이션 비용을 피한다)."""
+    QUEUED = "QUEUED"
+    RUNNING = "RUNNING"
+    RESEARCHING = "RESEARCHING"
+    WRITING = "WRITING"
+    VALIDATING = "VALIDATING"
+    HUMAN_REVIEW = "HUMAN_REVIEW"
+    SUCCEEDED = "SUCCEEDED"
+    FAILED = "FAILED"
+
+
+class ReportDraftStatus(StrEnum):
+    """report_drafts.status. Agent는 DRAFT만 쓸 수 있고, 최종 확정은
+    치료사가 기존 reports 워크플로에서 수행한다."""
+    DRAFT = "DRAFT"
+
+
