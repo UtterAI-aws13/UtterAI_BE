@@ -1,5 +1,7 @@
 """Reusable API dependencies shared across routers."""
 
+import logging
+
 from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
@@ -12,6 +14,8 @@ from app.core.config import get_settings
 from app.core.security import decode_access_token
 from app.repositories.user import UserRepository
 from app.schemas.auth import TokenPayload, UserRead
+
+logger = logging.getLogger(__name__)
 
 # The token URL points to our JSON login endpoint so the OpenAPI docs still
 # describe where a client obtains bearer tokens.
@@ -51,6 +55,11 @@ def get_current_user(
     span = trace.get_current_span()
     span.set_attribute("user.id", str(resolved.id))
     span.set_attribute("user.email", resolved.email)
+    # uvicorn's own access logger bypasses OtelJsonFormatter entirely
+    # (propagate=False), so it never carries user.email — this app-level
+    # logger call, made while the span is still current, is what actually
+    # lands a searchable user_email field in stdout for Loki.
+    logger.info("authenticated request for %s", resolved.email)
     return resolved
 
 
