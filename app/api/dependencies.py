@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db_session
 from app.core.enums import UserStatus
 from app.core.config import get_settings
-from app.core.logging import set_request_user_email
 from app.core.security import decode_access_token
 from app.repositories.user import UserRepository
 from app.schemas.auth import TokenPayload, UserRead
@@ -52,7 +51,6 @@ def get_current_user(
     span = trace.get_current_span()
     span.set_attribute("user.id", str(resolved.id))
     span.set_attribute("user.email", resolved.email)
-    set_request_user_email(resolved.email)
     return resolved
 
 

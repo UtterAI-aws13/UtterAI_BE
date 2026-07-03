@@ -4,16 +4,8 @@ from __future__ import annotations
 
 import json
 import logging
-from contextvars import ContextVar
 
 from opentelemetry import trace
-
-_user_email_var: ContextVar[str] = ContextVar('user_email', default='')
-
-
-def set_request_user_email(email: str) -> None:
-    _user_email_var.set(email)
-
 
 _SKIP_ATTRS = frozenset((
     "name", "msg", "args", "levelname", "levelno",
@@ -41,7 +33,14 @@ class OtelJsonFormatter(logging.Formatter):
             "span_id": format(ctx.span_id, "016x") if ctx.is_valid else "",
         }
 
-        user_email = _user_email_var.get()
+        # Read off the span's attributes rather than a ContextVar: the
+        # dependency that resolves the user runs in FastAPI's threadpool
+        # (sync def), and contextvars.copy_context() there means any
+        # ContextVar.set() inside it never propagates back to the request's
+        # context. The span object itself is shared by reference across
+        # that boundary, so attribute mutations on it are visible everywhere.
+        attributes = getattr(span, "attributes", None) or {}
+        user_email = attributes.get("user.email")
         if user_email:
             entry["user_email"] = user_email
 
