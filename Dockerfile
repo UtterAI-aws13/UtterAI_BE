@@ -18,6 +18,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 COPY alembic.ini ./
 COPY app ./app
 COPY alembic ./alembic
+COPY scripts ./scripts
 
 EXPOSE 8080
 
