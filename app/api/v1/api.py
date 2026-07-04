@@ -11,6 +11,7 @@ from app.api.v1.endpoints.insight_map import router as insight_map_router
 from app.api.v1.endpoints.patients import router as patients_router
 from app.api.v1.endpoints.report import router as report_router
 from app.api.v1.endpoints.report_chat import router as report_chat_router
+from app.api.v1.endpoints.report_generation import router as report_generation_router
 from app.api.v1.endpoints.session_transcript import router as session_transcript_router
 from app.api.v1.endpoints.sessions import router as sessions_router
 from app.api.v1.endpoints.templates import router as templates_router
@@ -27,6 +28,7 @@ api_v1_router.include_router(audio_router, prefix="/audio-files", tags=["audio-f
 api_v1_router.include_router(analysis_router, prefix="/analysis-jobs", tags=["analysis-jobs"])
 api_v1_router.include_router(report_router, prefix="/reports", tags=["reports"])
 api_v1_router.include_router(report_chat_router, prefix="/reports", tags=["report-chat"])
+api_v1_router.include_router(report_generation_router, tags=["report-generation"])
 api_v1_router.include_router(templates_router, prefix="/templates", tags=["templates"])
 api_v1_router.include_router(transcript_router, prefix="/transcripts", tags=["transcripts"])
 api_v1_router.include_router(insight_map_router, prefix="/insight-map", tags=["insight-map"])
