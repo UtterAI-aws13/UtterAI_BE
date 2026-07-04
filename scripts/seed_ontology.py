@@ -9,11 +9,16 @@ edges는 concept_key 쌍 + relation_type 기준으로 존재 여부를 확인한
 
 from __future__ import annotations
 
+import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
 import yaml
+
+# Running this file directly (`python scripts/seed_ontology.py`) puts scripts/
+# on sys.path instead of the project root, so `app` is not importable without this.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.core.db import SessionLocal
 from app.models.entities import OntologyConcept, OntologyEdge
